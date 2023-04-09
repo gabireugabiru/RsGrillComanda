@@ -1,0 +1,9 @@
+{
+  "editor.formatOnSave": true,
+  "emmet.includeLanguages": {
+    "rust": "html"
+  },
+  "rust-analyzer.linkedProjects": [
+    "./Cargo.toml"
+  ]
+}

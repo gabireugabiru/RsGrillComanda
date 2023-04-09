@@ -1,0 +1,70 @@
+@mixin flex($justify: center, $align: center, $direction: row) {
+    display: flex;
+    justify-content: $justify;
+    align-items: $align;
+    flex-direction: $direction;
+}
+
+@mixin inline_input($height: 50px, $font-size: 1.8rem, $ratio: 80%) {
+    border: 2px solid #fff;
+    border-radius: 16px;
+    height: $height;
+    width: 100%;
+    background: #1b1b1d;
+    @include flex(center, center);
+
+    &:focus-within {
+        border: 2px solid #6ddc45;
+    }
+
+    >input {
+        height: 100%;
+        width: $ratio;
+        background: transparent;
+        border: none;
+        border-radius: 16px;
+        padding-left: 6px;
+        color: #fff;
+        outline: none;
+        font-size: 1.8rem;
+    }
+
+    >button {
+        width: 100% - $ratio;
+        border-radius: 8px;
+        background: #fff;
+        border: none;
+        height: $height - 10px;
+        margin-right: 5px;
+        font-weight: bold;
+    }
+
+    >button:hover {
+        background: #6ddc45;
+        color: black;
+    }
+}
+
+@mixin default_button($border: #6ddc45, $hover_border: #285430, $hover_background: #84eb5f) {
+    padding: .5rem 1rem;
+    border-radius: 8px;
+    color: #1c1b21;
+    border: 2px solid $border;
+    background: transparent;
+    color: inherit;
+
+
+
+    &.selected {
+        background: $border;
+        border: 2px solid $hover_border;
+        color: black;
+        font-weight: bold;
+    }
+
+    &:hover {
+        background: $hover_background;
+        border: 2px solid $hover_border;
+        color: black;
+    }
+}

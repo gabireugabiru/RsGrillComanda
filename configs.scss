@@ -1,0 +1,83 @@
+@use 'mixins';
+
+main>div.main.configs {
+    >ul {
+        width: 90%;
+        max-width: 90%;
+        padding: 1rem;
+        border-radius: 8px;
+        background: #242526;
+
+        input {
+            background: #1b1b1d;
+            border: 2px solid #bbb;
+            border-radius: 8px;
+            padding: 6px;
+            outline: none;
+
+            &:focus {
+                border: 2px solid #6ddc45;
+            }
+        }
+
+        input:disabled {
+            color: #aaa;
+            border: 1px solid #aaa;
+        }
+
+        input[type="number"] {
+            @media only screen and(max-width: 1000px) {
+                max-width: 150px;
+            }
+        }
+
+        input.group {
+            @media only screen and(max-width: 1400px) {
+                max-width: 200px;
+            }
+        }
+
+        button {
+            @include mixins.default_button;
+        }
+
+        button.danger {
+            @include mixins.default_button(#e44343, #b61212, red);
+        }
+
+        li {
+
+            >div,
+            form {
+                @include mixins.flex($justify: start);
+                gap: .8rem;
+            }
+        }
+
+        li.groups {
+            >div.group {
+                @include mixins.flex($align: start, $direction: column);
+
+                >div {
+                    @include mixins.flex($justify: start);
+                    gap: .8rem;
+                }
+
+                >div.group_values {
+                    @include mixins.flex($align: start, $direction: column);
+
+                    >form {
+                        @include mixins.flex($justify: start);
+                        gap: .8rem;
+                    }
+                }
+            }
+        }
+
+        li+li {
+            margin-top: .5rem;
+        }
+    }
+
+    // input[type=]
+}

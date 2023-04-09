@@ -1,0 +1,74 @@
+@use 'header';
+@use 'comandas';
+@use 'configs';
+@use 'mixins';
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: #fff;
+  background: #1b1b1d;
+}
+
+.hidden {
+  display: none;
+}
+
+
+ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+button {
+  font-size: inherit;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+input {
+  font-size: inherit;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+}
+
+main>div.main {
+  @include mixins.flex(center, center, column);
+  font-size: 1.8rem;
+  margin-top: 2rem;
+  margin-bottom: 10rem;
+
+  >div.wrapper {
+    border-radius: 8px;
+    background: #242526;
+    padding: 1rem;
+
+    >h2 {
+      text-align: center;
+    }
+  }
+
+
+  >div.wrapper>form.new_comand {
+    @include mixins.inline_input(50px, 1.8rem, 80%);
+  }
+}
+
+@media only screen and(max-width: 1100px) {
+  :root {
+    font-size: 80%;
+  }
+}
+
+@media only screen and(max-width: 850px) {
+  :root {
+    font-size: 60%;
+  }
+}

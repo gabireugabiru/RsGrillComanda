@@ -1,0 +1,191 @@
+@use 'mixins';
+
+main>div.main {
+    >div.top_info {
+        width: 80%;
+        max-width: 80%;
+        background: #242526;
+        padding: 1rem;
+        @include mixins.flex(start, center);
+        border-radius: 8px;
+
+        >form {
+            @include mixins.inline_input(50px, 1.8rem, 70%);
+            margin-left: 16px;
+        }
+    }
+
+    div.top_info+div.top_info {
+        margin-top: 1rem;
+        width: 80%;
+
+        div {
+            width: 20%;
+            padding-left: 6px;
+        }
+
+        div.name {
+            width: 60%;
+        }
+    }
+
+    div.total_comand {
+        width: 80%;
+        font-size: 2.5rem;
+        margin-top: 1rem;
+        padding: 1rem;
+        @include mixins.flex($justify: space-between);
+        border-radius: 8px;
+        background: #242526;
+
+        >div:last-child {
+            font-weight: bolder;
+            width: 20%;
+        }
+    }
+
+    div.finalize {
+        width: 80%;
+        margin-top: 1rem;
+        @include mixins.flex($justify: space-between);
+
+        >div:last-child {
+            width: 60%;
+
+            >button {
+                @include mixins.default_button;
+                width: 100%;
+            }
+        }
+    }
+
+    >ul.comand_items {
+        margin-top: 1rem;
+        background: #242526;
+        padding: 1rem;
+        border-radius: 8px;
+        width: 80%;
+        max-width: 80%;
+        font-size: 2.5rem;
+
+        >li.comand_item {
+            margin-bottom: 1rem;
+
+            >form {
+                @include mixins.flex(center center);
+                gap: 5px;
+
+                >div.name {
+                    position: relative;
+                    width: 60%;
+                    padding: none;
+                    margin: 0;
+                    border: 2px solid #bbb;
+                    border-radius: 8px;
+
+                    div.sugestions {
+                        position: absolute;
+                        left: 0;
+                        bottom: 0;
+                        width: 100%;
+                        z-index: 1;
+                        background: #242526;
+                        border: 2px solid #6ddc45;
+                        border-radius: 8px;
+                        overflow-y: auto;
+                        overflow-x: hidden;
+
+                        >header {
+                            @include mixins.flex($justify: space-between);
+                            font-size: 1.3rem;
+                            color: red;
+                            padding: 6px 1rem 0 1rem;
+
+                            >span:last-child {
+                                cursor: pointer;
+                            }
+                        }
+
+                        >div {
+                            padding: 0 1rem;
+                            cursor: pointer;
+                        }
+
+                        >div+div {
+                            margin-top: 6px;
+                        }
+                    }
+
+                    >input {
+                        border: none;
+                        border-radius: 8px;
+                    }
+
+                    >input.group {
+                        border-left: 2px solid #bbb;
+                        border-bottom-left-radius: 0px;
+                        border-top-left-radius: 0px;
+                    }
+                }
+
+
+                input {
+                    outline: none;
+                    background: #1b1b1d;
+                    border-color: #bbb;
+                    border-style: solid;
+                    color: white;
+                    padding: 6px;
+                    font-size: 2rem;
+                }
+
+                input:focus {
+                    border-color: #6ddc45;
+                }
+
+                >div.name:focus-within {
+                    border: 2px solid #6ddc45;
+
+                    >input:last-child {
+                        border-left: 2px solid #6ddc45;
+                    }
+
+                }
+
+
+                input.name {
+                    width: 100%;
+                }
+
+
+                input.quantity {
+                    width: 20%;
+                    border-radius: 8px;
+                    border-width: 2px;
+                }
+
+                div.total {
+                    width: 20%;
+                    border-radius: 8px;
+                    border-width: 2px;
+                }
+
+                input.group {
+                    width: 50%;
+                }
+
+                input.name.include {
+                    width: 50%;
+                    border-right: none;
+                    border-top-right-radius: 0px;
+                    border-bottom-right-radius: 0px;
+                }
+
+            }
+        }
+
+        li.command_item:last-child {
+            margin-bottom: 0px;
+        }
+    }
+}
