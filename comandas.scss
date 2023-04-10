@@ -10,7 +10,7 @@ main>div.main {
         border-radius: 8px;
 
         >form {
-            @include mixins.inline_input(50px, 1.8rem, 70%);
+            @include mixins.inline_input(50px, 1.8rem, 65%);
             margin-left: 16px;
         }
     }
@@ -48,14 +48,99 @@ main>div.main {
         width: 80%;
         margin-top: 1rem;
         @include mixins.flex($justify: space-between);
+        gap: 1rem;
+
+        .payment {
+            width: 100%;
+
+            >button {
+                min-height: 50px;
+                width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
+
+                background: #6ddc45;
+                font-weight: bolder;
+                border-radius: 8px;
+                border: none;
+            }
+
+            >div {
+                height: 70px;
+                bottom: -80px;
+            }
+        }
+
+        >div:first-child {
+            width: 40%;
+        }
 
         >div:last-child {
             width: 60%;
 
             >button {
+                min-height: 50px;
                 @include mixins.default_button;
                 width: 100%;
+                font-weight: bolder;
             }
+        }
+    }
+
+    div.comand_option {
+        width: 30%;
+
+        >button {
+            min-height: 50px;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            border-radius: 8px;
+            background: white;
+            border: none;
+        }
+    }
+
+    div.exchange {
+        margin-top: 1rem;
+        width: 80%;
+        @include mixins.flex($justify: space-between);
+        background: #242526;
+        padding: 1rem;
+        border-radius: 8px;
+
+        >form {
+            @include mixins.flex($justify: left);
+            gap: 1rem;
+            width: 70%;
+            height: 60px;
+
+            >input {
+                border: 2px solid #bbb;
+                border-radius: 8px;
+                background: #1b1b1d;
+                color: white;
+                outline: none;
+                height: 100%;
+                padding: 6px;
+
+                &:hover {
+                    border: 2px solid #6ddc45;
+                }
+            }
+
+            >button {
+                @include mixins.default_button;
+                height: 100%;
+            }
+        }
+
+        >div {
+            width: 30%;
+            font-weight: bold;
+            text-align: end;
         }
     }
 

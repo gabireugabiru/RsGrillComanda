@@ -18,11 +18,11 @@
     }
 
     >input {
-        height: 100%;
+        min-height: $height;
         width: $ratio;
         background: transparent;
         border: none;
-        border-radius: 16px;
+        border-radius: 8px;
         padding-left: 6px;
         color: #fff;
         outline: none;
@@ -34,7 +34,7 @@
         border-radius: 8px;
         background: #fff;
         border: none;
-        height: $height - 10px;
+        min-height: $height - 10px;
         margin-right: 5px;
         font-weight: bold;
     }

@@ -1,10 +1,11 @@
 use shared::payment::Payment;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{console, HtmlInputElement, HtmlSelectElement, Element};
+use web_sys::{console, HtmlInputElement, Element};
 use yew::{html::onchange::Event, prelude::*};
 
 use crate::components::input_auto::InputAuto;
+use crate::components::select::Select;
 use crate::infra::{document, get, alert, window, log, scroll_into_view};
 use crate::reducer::ApplicationState;
 use crate::{
@@ -20,6 +21,7 @@ pub struct Props {
 
 #[function_component(MainPage)]
 pub fn mainpage(Props { state }: &Props) -> Html {
+    let exchange = use_state(|| 0.0);
     if let Some(selected) = state.selected_comand.clone() {
         let (inputs, payment) = match state.comands.get(&selected).cloned() {
             Some(a) => a,
@@ -37,11 +39,7 @@ pub fn mainpage(Props { state }: &Props) -> Html {
 
         let change_comand = {
             let state = state.clone();
-            Callback::from(move |ev: yew::html::onchange::Event| {
-                let select: HtmlSelectElement = ev
-                    .target_dyn_into()
-                    .expect("this was supposed to be a input");
-                let new_name = select.value();
+            Callback::from(move |new_name: String| {
                 state
                     .dispatch(Actions::ChangeSelectedComand(new_name))
             })
@@ -125,12 +123,8 @@ pub fn mainpage(Props { state }: &Props) -> Html {
         let payment_change = {
             let state = state.clone();
             let selected = selected.clone();
-            Callback::from(move |_: yew::html::onchange::Event| {
-                let docs = document();
-                let select: HtmlSelectElement = get!(docs => "payment_method").unwrap();
-                
-                let new_payment: Payment = select.value().into();
-                state.dispatch(Actions::SetPayment(selected.clone(), new_payment))
+            Callback::from(move |new_payment: String| {
+                state.dispatch(Actions::SetPayment(selected.clone(), new_payment.into()))
             }) 
         };
 
@@ -380,23 +374,6 @@ pub fn mainpage(Props { state }: &Props) -> Html {
             })
             .collect::<Html>();
 
-        let select = state.comands.iter().map(|(k, _)| {
-            let k = k.to_string();
-            html! {
-                <option key={k.clone()} value={k.clone()} selected={k == selected}>{k}</option>
-            }
-        }).collect::<Html>();
-        let select_payment: Html = Payment::iter().map(|a| {
-            html! {
-                <option key={a.to_string()} value={a.to_string()} selected={payment == a}>{match a {
-                        Payment::Credit => "Crédito",
-                        Payment::Debit => "Débito",
-                        Payment::Money => "Dinheiro",
-                        Payment::Pix => "Pix",
-                        _ => "Selectione o metodo de pagamento",
-                    }}</option>
-            }
-        }).collect();
         let total = (*inputs).iter().fold(0.0, |a, b| {
             let price = match state.products.get(&b.name) {
                 Some(a) => a.0 * b.quantity as f32,
@@ -445,9 +422,10 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                 <Header state={state.clone()} />
                 <div class="main">
                     <div class="top_info">
-                        <select value={selected} onchange={change_comand}>
-                            {select}
-                        </select>
+
+                        <Select class="comand_option" callback ={change_comand} values={state.comands.iter().map(|(k, _)| {
+                            k.clone()
+                        }).collect::<Vec<String>>()} selected={selected}  />
                         {new_comand}
                     </div>
                     <div class="top_info">
@@ -472,12 +450,11 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                     </div>
                     <div class="finalize">
                         <div>
-             
-                            <select id="payment_method" onchange={payment_change} value={payment.to_string()}>
-                                {select_payment}
-                            </select>
-
-                            
+                            <Select 
+                                class="payment"
+                                callback={payment_change} 
+                                values={Payment::iter().map(|a| a.to_string()).collect::<Vec<String>>()} 
+                                selected={payment.to_string()} />
                         </div>
                         <div>
                             <button onclick={onfinalize}>
@@ -488,8 +465,40 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                                 }
                             </button>
                         </div>
-
                     </div>
+                    if payment == Payment::Money {
+                        <div class="exchange">
+                            <form onsubmit={{
+                                let exchange = exchange.clone();
+                                Callback::from(move |ev: SubmitEvent| {
+                                    ev.prevent_default();
+                                    let docs = document();
+                                    let input: HtmlInputElement = get!(docs => "payed_amount").unwrap();
+                                    let Ok(payed) = input.value().parse::<f64>() else {
+                                        return
+                                    };
+                                    exchange.set(payed); 
+                                })
+                            }}>
+                                <span>
+                                    {"Cliente pagou: "}
+                                </span>
+                                <input type="number" id="payed_amount" value={exchange.to_string()} />
+                                <button type="submit">
+                                    {"Calcular"}
+                                </button>
+                            </form>
+                            <div>
+                                if (total - *exchange) < 0.0 {
+                                    {format!("Troco R${:.2}", (total - *exchange).abs())}
+                                } else if (total - *exchange) > 0.0 {
+                                    {format!("Cliente devendo R${:.2}", (total - *exchange).abs())}
+                                } else {
+
+                                }
+                            </div>
+                        </div>
+                    }
                 </div>
             </main>
         }

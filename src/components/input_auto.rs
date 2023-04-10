@@ -47,7 +47,7 @@ pub fn input_auto(
             .collect()
     };
     let height =
-        std::cmp::min(25 + filterd_autocomplete.len() * 60, 300);
+        std::cmp::min(25 + filterd_autocomplete.len() * 70, 300);
     let mut autocomplete = !filterd_autocomplete.is_empty();
 
     let keychange = {

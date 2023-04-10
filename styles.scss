@@ -61,6 +61,50 @@ main>div.main {
   }
 }
 
+.select_component {
+  position: relative;
+
+  >button {
+    padding: .5rem 1rem;
+  }
+
+  >div {
+    position: absolute;
+    left: 0;
+    width: 100px;
+    width: calc(80vw - 2rem);
+    padding: .5rem;
+    bottom: -140px;
+    height: 130px;
+    background: #242526;
+    border: 1px solid #6ddc45;
+    border-radius: 8px;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    overflow: hidden;
+    overflow-y: auto;
+
+    >div {
+      background: white;
+      color: black;
+      font-weight: bold;
+      font-size: 1.5rem;
+      border-radius: 8px;
+      height: 50px;
+      padding: .5rem;
+      @include mixins.flex(center, center);
+      cursor: pointer;
+      // border: 2px solid transparent;
+    }
+
+    >div.selected {
+      background: #6ddc45;
+    }
+  }
+}
+
 @media only screen and(max-width: 1100px) {
   :root {
     font-size: 80%;
@@ -70,5 +114,11 @@ main>div.main {
 @media only screen and(max-width: 850px) {
   :root {
     font-size: 60%;
+  }
+}
+
+@media only screen and(min-width: 1400px) {
+  :root {
+    font-size: 120%;
   }
 }

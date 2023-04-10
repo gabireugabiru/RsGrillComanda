@@ -7,6 +7,7 @@ mod mainpage;
 mod reducer;
 mod components {
     pub mod input_auto;
+    pub mod select;
 }
 
 use app::App;

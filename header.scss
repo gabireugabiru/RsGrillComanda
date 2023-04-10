@@ -3,13 +3,24 @@
 
 header.main {
     @include mixins.flex(space-between, center);
-    padding: .8rem 1rem;
     background: #242526;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 1.8rem;
     box-shadow: 0 1px 2px 0 #0000001a;
+
+    img {
+        max-height: 120px;
+
+        @media only screen and(min-width: 1400px) {
+            max-height: 150px;
+        }
+    }
+
+    >div {
+        padding: .8rem 1rem 0 .8rem;
+    }
 
     button {
         @include mixins.default_button;

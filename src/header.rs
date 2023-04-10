@@ -72,11 +72,8 @@ pub fn header(Props { state }: &Props) -> Html {
     };
     html! {
         <header class="main">
+            <img src="/public/espetaria_light.png" />
             <div>
-                {"RsGrill"}
-            </div>
-            <div>
-
                 <button onclick={main} class={classes!(if state.pages == Pages::Main {
                     "selected"
                 } else {""})}>
