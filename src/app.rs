@@ -4,6 +4,7 @@ use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
 use crate::{
+    backups::Backups,
     configs::Configs,
     invoke::{invokem, Invoke},
     mainpage::MainPage,
@@ -35,6 +36,9 @@ pub fn app() -> Html {
         }
         Pages::Configs => {
             html! { <Configs state={state} />}
+        }
+        Pages::Backups => {
+            html! { <Backups state={state} />}
         }
     }
 }

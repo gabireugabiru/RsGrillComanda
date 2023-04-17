@@ -25,6 +25,11 @@ pub struct UpdateArgs {
 pub struct SetGroupsArgs {
     pub groups: Vec<(String, Vec<String>)>,
 }
+#[derive(Deserialize, Serialize)]
+pub struct ReExportArgs {
+    pub backup: String,
+}
+
 pub enum Invoke {
     File,
     GetGroups,
@@ -33,14 +38,32 @@ pub enum Invoke {
     Export,
     IsCacheEmpty,
     UpdateProducts(UpdateArgs),
+    ListBakcups,
+    ReExport(ReExportArgs),
 }
 
 impl Invoke {
-    pub async fn string_invoke(
+    pub async fn string_invoke<T>(
         a: &'static str,
-        args: JsValue,
-    ) -> Result<String, InError> {
-        invoke(a, args).await.as_string().ok_or_else(|| InError {
+        args: T,
+    ) -> Result<String, InError>
+    where
+        T: Serialize,
+    {
+        invoke(
+            a,
+            match to_value(&args) {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(InError {
+                        a: "Failed to parse".to_string(),
+                    })
+                }
+            },
+        )
+        .await
+        .as_string()
+        .ok_or_else(|| InError {
             a: "failed".to_string(),
         })
     }
@@ -51,44 +74,32 @@ impl Invoke {
     ) -> Result<T, InError> {
         match self {
             Self::File => {
-                *buffer =
-                    Self::string_invoke("file", JsValue::default())
-                        .await?;
+                *buffer = Self::string_invoke("file", ()).await?;
             }
             Self::SaveComand(saveargs) => {
-                let args = to_value(saveargs).unwrap();
-                *buffer =
-                    Self::string_invoke("save_comand", args).await?;
+                *buffer = Self::string_invoke("save_comand", saveargs).await?;
             }
             Self::Export => {
-                *buffer =
-                    Self::string_invoke("export", JsValue::default())
-                        .await?;
+                *buffer = Self::string_invoke("export", ()).await?;
             }
             Self::IsCacheEmpty => {
-                *buffer = Self::string_invoke(
-                    "is_cache_empty",
-                    JsValue::default(),
-                )
-                .await?;
+                *buffer = Self::string_invoke("is_cache_empty", ()).await?;
             }
-            Self::UpdateProducts(updateargs) => {
-                let args = to_value(updateargs).unwrap();
-                *buffer =
-                    Self::string_invoke("update_products", args)
-                        .await?;
+            Self::UpdateProducts(args) => {
+                *buffer = Self::string_invoke("update_products", args).await?;
             }
             Self::GetGroups => {
-                *buffer = Self::string_invoke(
-                    "get_groups",
-                    JsValue::default(),
-                )
-                .await?;
+                *buffer = Self::string_invoke("get_groups", ()).await?;
             }
             Self::SetGroups(args) => {
-                let args = to_value(args).unwrap();
-                *buffer =
-                    Self::string_invoke("set_groups", args).await?;
+                *buffer = Self::string_invoke("set_groups", args).await?;
+            }
+            Self::ListBakcups => {
+                *buffer = Self::string_invoke("read_backups", ()).await?;
+            }
+            Self::ReExport(args) => {
+                log!("{:?}", args.backup);
+                *buffer = Self::string_invoke("re_export", args).await?;
             }
         };
         serde_json::from_str::<Result<T, InError>>(buffer)?
@@ -102,3 +113,5 @@ macro_rules! invokem {
     }};
 }
 pub(crate) use invokem;
+
+use crate::infra::log;

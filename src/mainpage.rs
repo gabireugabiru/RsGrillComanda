@@ -1,12 +1,12 @@
 use shared::payment::Payment;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{console, HtmlInputElement, Element};
+use web_sys::{ HtmlInputElement, Element};
 use yew::{html::onchange::Event, prelude::*};
 
 use crate::components::input_auto::InputAuto;
 use crate::components::select::Select;
-use crate::infra::{document, get, alert, window, log, scroll_into_view};
+use crate::infra::{document, get, alert, window, scroll_into_view};
 use crate::reducer::ApplicationState;
 use crate::{
     header::Header,
@@ -29,7 +29,7 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                 return html! {
                     <main>
                         <Header state={state.clone()} />
-                        <div class="main">
+                        <div class="main comandas">
                         </div>
                     </main>
                 }
@@ -45,10 +45,13 @@ pub fn mainpage(Props { state }: &Props) -> Html {
             })
         };
 
+        // FINSH COMAND
         let onfinalize = {
             let state = state.clone();
             let selected = selected.clone();
             Callback::from(move |_: yew::html::onclick::Event| {
+
+                // FORCE A PAYMENT SELECTED
                 if payment == Payment::NotSelected {
                     alert!(window() => "Selecione um metodo de pagamento");
                     return
@@ -57,69 +60,74 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                 let selected = selected.clone();
           
                 spawn_local(async move {
-                    let values =
-                        state.comands.get(&selected).cloned();
 
-                    if let Some(mut values) = values {
-                        let values: Vec<BackendInput> = values.0
-                            .iter_mut()
-                            .flat_map(|i| {
+                    // GET SELECTED COMAND
+                    let Some(mut values) =
+                        state.comands.get(&selected).cloned() else {
+                            return
+                        };
 
-                                let a = state.products.get(&i.name)?;
-                                Some(BackendInput {
-                                    name:  if let Some(group) = &i.group {
-                                        if a.1.is_some() {
-                                            format!("{}({})", i.name, group.trim())
-                                        } else {
-                                            i.name.clone()
-                                        }
+                    //CONVERT THE COMAND FOR BACKEND VALUES
+                    let values: Vec<BackendInput> = values.0
+                        .iter_mut()
+                        .flat_map(|i| {
+
+                            let a = state.products.get(&i.name)?;
+                            Some(BackendInput {
+                                name:  if let Some(group) = &i.group {
+                                    if a.1.is_some() {
+                                        format!("{}({})", i.name, group.trim())
                                     } else {
                                         i.name.clone()
-                                    },
-                                    quantity: i.quantity,
-                                    unit_price: a.0,
-                                })
+                                    }
+                                } else {
+                                    i.name.clone()
+                                },
+                                quantity: i.quantity,
+                                unit_price: a.0,
                             })
-                            .collect();
+                        })
+                        .collect();
 
-                        let win = window();
-                        if values.is_empty() {
-                            alert!(win => "Comanda vazia");
-                            return;
-                        }
+                    let win = window();
 
-                        if !state.confirm_finalize {
-                            state.dispatch(Actions::ConfirmFinalize);
-                            return;
-                        }
-
-                        let comand = Comand {
-                            comand_name: selected.clone(),
-                            values,
-                            payment_method: payment
-                        };
-
-                        match invokem!(
-                            Invoke::SaveComand(SaveArgs { comand }),
-                            ()
-                        ) {
-                            Ok(_) => {
-                                state.dispatch(Actions::RemoveComand(
-                                    selected,
-                                ))
-                            }
-                            Err(err) => {
-                                alert!(win => "Failed to save the comand");
-                                console::error_1(
-                                    &format!("{:?}", err).into(),
-                                );
-                            }
-                        };
-                
+                    if values.is_empty() {
+                        alert!(win => "Comanda vazia");
+                        return;
                     }
+
+                    if !state.confirm_finalize {
+                        state.dispatch(Actions::ConfirmFinalize);
+                        return;
+                    }
+
+                    // CALL THE BACKEND TO SAVE THE COMAND
+                    let comand = Comand {
+                        comand_name: selected.clone(),
+                        values,
+                        payment_method: payment
+                    };
+
+                    match invokem!(
+                        Invoke::SaveComand(SaveArgs { comand }),
+                        ()
+                    ) {
+                        Ok(_) => {
+                            state.dispatch(Actions::RemoveComand(
+                                selected,
+                            ))
+                        }
+                        Err(err) => {
+                            alert!(win => "Falha ao salvar comanda '{}'", err);
+                        }
+                    };
+                
                 });
             })
         };
+
+
+        // HANDLE PAYMENT CHANGE
         let payment_change = {
             let state = state.clone();
             let selected = selected.clone();
@@ -138,7 +146,9 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                     let selected = selected.clone();
                     Callback::from(move |ev: SubmitEvent| {
                         ev.prevent_default();
-                        if i == state.comands.get(&selected).unwrap().0.len() - 1 {
+
+                        // IF IS LAST INPUT PUSH A NEW INPUT
+                        if i + 1 == state.comands.get(&selected).unwrap().0.len() {
                             state.dispatch(Actions::PushInput(selected.clone(), Input::default()));
                         }
                         let docs = document();
@@ -151,81 +161,43 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                             docs.active_element()
                         {
                             if active == group.clone().into() {
-                                
+                                // GET THE PRODUCT BASED ON TYPED NAME
                                 let Some(prod) = state.products.get(&name.value().trim().to_string()) else {
                                     return
                                 };
-                                if let Some(gr) = &prod.1 {
-                                    let Some(valid_list) = state.groups.get(gr) else {
+                                if let Some(gp) = &prod.1 {
+                                    // CHECK IF TYPED VALUE IS INSIDE ITS GROUP 
+                                    let selected_group = group.value().trim().to_string();
+                                    let Some(valid_list) = state.groups.get(gp) else {
                                         return
                                     };
-                                    
-                                    let selected_group = group.value().trim().to_string();
-                                    
                                     if valid_list.contains(&selected_group) {
                                         input.focus().unwrap();
                                         scroll_into_view(input);
-                                    } else {
-                                        let filtered: Vec<_> = valid_list.iter().filter(|a| a.contains(&selected_group)).collect();
-                                        if filtered.len() == 1{
-                                            let new_val = filtered.first().unwrap();
-                                            
-                                            let inputs = state.comands.get(&selected);
-                                            if let Some(t) = inputs {
-                                                let mut ins = t.0[i].clone();
-                                                ins.group = Some(new_val.to_string()); 
-                                                state.dispatch(Actions::UpdateInput(selected.clone(), ins, i))
-                                            }
-
-                                        }
                                     }
                                 }
                             } else if active == input.clone().into() {
-                                let Some(new_line_input): 
-                                Option<HtmlInputElement> = get! {
-                                    docs => "name{}", i + 1
-                                } else {
+                                // FOCUS ON NEW LINE
+                                let Some(new_line_input): Option<HtmlInputElement> = 
+                                get! (docs => "name{}", i + 1) else {
                                     return
                                 };
                                 new_line_input.focus().unwrap();
                                 scroll_into_view(new_line_input);
-                            } else {
-                                let prod = match state.products.get(&name.value().trim().to_string()) {
-                                    Some(a) => Some(a),
-                                    None => {
-                                        let vec: Vec<_> = state.products.iter().map(|(k, _)| k).collect();
-                                        let filtered = if name.value().to_string().is_empty() {
-                                            Vec::new()
-                                        } else {
-                                            vec
-                                                .iter()
-                                                .filter(|a| a.contains(&name.value().trim().to_string()))
-                                                .cloned()
-                                                .collect()
-                                        };
-                                        if filtered.len() == 1 {
-                                            let a = filtered.first().unwrap();
-                                            let inputs = state.comands.get(&selected);
-                                            if let Some(t) = inputs {
-                                                let mut ins = t.0[i].clone();
-                                                ins.name = a.to_string(); 
-                                                state.dispatch(Actions::UpdateInput(selected.clone(), ins, i))
-                                            }
-                                        } 
-                                        return 
-                                    }
+                            } else if active == name.clone().into() {
+                                let Some(prod) = state.products.get(&name.value().trim().to_string()) else {
+                                    return
                                 };
-                                if let Some(prod) = prod {
-                                    if prod.1.is_some() {
-                                        group.focus().unwrap();
-                                        scroll_into_view(group);
-                                    } else {
-                                        input.focus().unwrap();
-                                        scroll_into_view(input);
-                                    }
+                                // FOCUS ON GROUP IF IT HAS A GROUP
+                                if prod.1.is_some() {
+                                    group.focus().unwrap();
+                                    scroll_into_view(group);
+                                } else {
+                                    input.focus().unwrap();
+                                    scroll_into_view(input);
                                 }
                             }
-                        };
+                        }
                     })
                 };
 
@@ -235,11 +207,7 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                     let info_quantity = info.quantity;
                     let info_group = info.group.clone();
 
-                    Callback::from(move |ev: Event| {
-                        let target: HtmlInputElement =
-                            ev.target().unwrap().unchecked_into();
-                        let value = target.value();
-
+                    Callback::from(move |value: String| {
                         let new_input = Input {
                             name: value.trim().to_string(),
                             quantity: info_quantity,
@@ -275,8 +243,7 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                     let info_quantity = info.quantity;
                     let state = state.clone();
                     let selected = selected.clone();
-                    Callback::from(move |ev: yew::html::onchange::Event| {
-                        let value = ev.target_dyn_into::<HtmlInputElement>().unwrap().value();
+                    Callback::from(move |value: String| {
                         let new_input = Input {
                             name: info_name.clone(),
                             quantity: info_quantity,
@@ -294,7 +261,6 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                     let state = state.clone();
                     let selected = selected.clone();
                     Callback::from(move |a: yew::html::onclick::Event| {
-                        log!("teste");
                         let inputs = state.comands.get(&selected).unwrap();                        
                         let mut ins = inputs.0[i].clone();
                         ins.name = a.target_dyn_into::<Element>().unwrap().inner_html().trim().to_string();
@@ -305,7 +271,6 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                     let state = state.clone();
                     let selected = selected.clone();
                     Callback::from(move |a: yew::html::onclick::Event| {
-                        log!("teste");
                         let inputs = state.comands.get(&selected).unwrap();                        
                         let mut ins = inputs.0[i].clone();
                         ins.group = Some(a.target_dyn_into::<Element>().unwrap().inner_html().trim().to_string());
@@ -364,7 +329,7 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                             </div>
                             
                             <input class="quantity" id={format!("quantity{i}")} value={info.quantity.to_string()} onchange={change_quantity} type="number" />
-                            <button type="submit" style="display: none;"> {"Adicionar"} </button>
+                            <button type="submit"> {"Novo"} </button>
                             <div class="total">
                             {"R$"}{format!("{price:.2}")}
                             </div>
@@ -420,7 +385,7 @@ pub fn mainpage(Props { state }: &Props) -> Html {
         html! {
             <main>
                 <Header state={state.clone()} />
-                <div class="main">
+                <div class="main comandas">
                     <div class="top_info">
 
                         <Select class="comand_option" callback ={change_comand} values={state.comands.iter().map(|(k, _)| {
@@ -483,7 +448,7 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                                 <span>
                                     {"Cliente pagou: "}
                                 </span>
-                                <input type="number" id="payed_amount" value={exchange.to_string()} />
+                                <input type="number" id="payed_amount" step="any" value={exchange.to_string()} />
                                 <button type="submit">
                                     {"Calcular"}
                                 </button>
@@ -503,6 +468,8 @@ pub fn mainpage(Props { state }: &Props) -> Html {
             </main>
         }
     } else {
+
+        // CREATE A NEW COMAND
         let onfinalize = {
             let state = state.clone();
             Callback::from(move |ev: yew::html::onsubmit::Event| {
@@ -518,7 +485,7 @@ pub fn mainpage(Props { state }: &Props) -> Html {
         return html! {
             <main >
                 <Header state={state.clone()} />
-                <div class="main">
+                <div class="main comandas">
                     <div class="wrapper">
                         <h2>
                             {"Nova comanda"}

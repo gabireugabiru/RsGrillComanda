@@ -1,15 +1,11 @@
 use std::{
     collections::HashMap,
     error::Error,
-    fs::OpenOptions,
-    io::Read,
     ops::{Deref, DerefMut},
 };
 
 use shared::payment::Payment;
 use xlsxwriter::{Format, Workbook, Worksheet};
-
-use crate::default_join;
 
 #[derive(Default, Debug)]
 pub struct Value {
@@ -127,18 +123,15 @@ pub fn calc_payment(
     Ok(())
 }
 
-pub fn export(path: &str) -> Result<(), Box<dyn Error>> {
-    let mut file = OpenOptions::new()
-        .read(true)
-        .open(default_join("saved.csv")?)?;
-    let mut string = String::new();
-    file.read_to_string(&mut string)?;
-
+pub fn export(
+    contents: &str,
+    path: &str,
+) -> Result<(), Box<dyn Error>> {
     let mut comands = Vec::<Comand>::new();
 
     {
         let mut comand = Comand::default();
-        for line in string.lines() {
+        for line in contents.lines() {
             let line = line.trim();
             if line.is_empty() {
                 comands.push(comand);
@@ -203,7 +196,9 @@ pub fn export(path: &str) -> Result<(), Box<dyn Error>> {
     let mut total_pos = Positions::default();
     let mut quantities: HashMap<String, (Positions, u32)> =
         HashMap::new();
-    println!("{:?}", &comands);
+
+    let mut products: HashMap<&str, f64> = HashMap::new();
+
     sheet.set_default_row(30.0, false);
     for i in &comands {
         // COMAND AND HEADER
@@ -240,6 +235,7 @@ pub fn export(path: &str) -> Result<(), Box<dyn Error>> {
         // VALUES
         let mut form_pos = Positions::default();
         for value in &i.values {
+            products.insert(&value.name, value.unit_price);
             sheet.write_string(
                 row,
                 COL,
@@ -396,6 +392,15 @@ pub fn export(path: &str) -> Result<(), Box<dyn Error>> {
             &format!("=SUM({})", value.1 .0.to_string()),
             Some(&format1),
             value.1 .1 as f64,
+        )?;
+        let Some(unit) = products.get(value.0.as_str()) else {
+            continue
+        };
+        sheet.write_number(
+            ROW + i as u32,
+            COL + 11,
+            value.1 .1 as f64 * unit,
+            Some(&format2),
         )?;
     }
 

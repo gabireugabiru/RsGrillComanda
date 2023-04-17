@@ -4,14 +4,17 @@ mod macros;
 use macros::parsed_output;
 use shared::comand::Comand;
 use shared::errors::InError;
+use sysinfo::{SystemExt, Process};
+use std::fs::File;
 use std::io::Write;
 use std::path::{PathBuf, Path};
+use std::process::exit;
 use std::{
     collections::HashMap,
-    fs::{self, OpenOptions},
+    fs:: OpenOptions,
     io::Read,
 };
-use tauri::WindowEvent;
+use tauri::{WindowEvent, Window};
 
 const RS_GRILL_FOLDER: &str = ".RSGRILL";
 
@@ -20,33 +23,42 @@ fn default_join(file: &'static str) -> Result<PathBuf, InError>{
         return Err(InError { a: String::from("Failed to find home") })
     };
     home = home.join(RS_GRILL_FOLDER);
+    home = home.join(file);
     if !Path::new(&home).exists() {
         std::fs::create_dir_all(&home)?;
     };
-    home = home.join(file);
     Ok(home)
 }
+
+fn default_open<T>(path: T) -> Result<File, std::io::Error> where T: AsRef<Path> {
+    OpenOptions::new()
+        .write(true)
+        .read(true)
+        .create(true)
+        .open(path)
+}
+fn truncate<T>(path: T) -> Result<File, std::io::Error> where T: AsRef<Path> {
+    OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(path)
+}
+fn append<T>(path: T) -> Result<File, std::io::Error> where T: AsRef<Path> {
+    OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create(true)
+        .open(path)
+}
+
+
 
 #[tauri::command]
 fn file() -> String {
     parsed_output!(HashMap<String, (f32, Option<String>)>,
     {
-        let mut file =
-        match fs::File::options().read(true).open(default_join("products.csv")?) {
-            Ok(a) => a,
-            Err(err) => {
-                if err.kind() == std::io::ErrorKind::NotFound {
-                    let file = OpenOptions::new()
-                        .write(true)
-                        .read(true)
-                        .create(true)
-                        .open(default_join("products.csv")?)?;
-                    file
-                } else {
-                    return Err(err.into());
-                }
-            }
-        };
+        let mut file = default_open(default_join("products.csv")?)?;
 
         let mut buffer = String::new();
         file.read_to_string(&mut buffer)?;
@@ -91,11 +103,7 @@ fn update_products(products: Vec<(String, (f32, Option<String>))>) -> String {
             }
             
         }
-        let mut file = OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .create(true)
-            .open(default_join("products.csv")?)?;
+        let mut file = truncate(default_join("products.csv")?)?;
 
         write!(file, "{}", buffer)?;
 
@@ -106,11 +114,7 @@ fn update_products(products: Vec<(String, (f32, Option<String>))>) -> String {
 #[tauri::command]
 fn save_comand(comand: Comand) -> String {
     parsed_output!((), {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .create(true)
-            .open(default_join("saved.csv")?)?;
+        let mut file = append(default_join("saved.csv")?)?;
         writeln!(
             file,
             "{}\nPedido,Unidades,Unitario,Total",
@@ -143,11 +147,7 @@ fn save_comand(comand: Comand) -> String {
 #[tauri::command]
 fn is_cache_empty() -> String {
     parsed_output!(bool, {
-        let mut file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(default_join("saved.csv")?)?;
+        let mut file = default_open(default_join("saved.csv")?)?;
         let mut string = String::new();
         file.read_to_string(&mut string)?;
         for i in string.lines() {
@@ -160,43 +160,73 @@ fn is_cache_empty() -> String {
 }
 
 #[tauri::command]
-fn export() {
+fn export() -> String {
     tauri::api::dialog::FileDialogBuilder::new()
         .add_filter("xlsx", &["xlsx"])
         .set_file_name("sheet.xlsx")
         .save_file(|f| {
             if let Some(path) = f {
+                let mut other_path = path.clone();
+                other_path.set_extension("csv");
+                let Some(a) = other_path.file_name() else {
+                    return
+                };
+
+                let real_file_name = a.to_string_lossy();
+
                 let Some(str) = path.to_str() else {
                     return
                 };
-                if let Err(err) = export::export(str) {
+
+                let Ok(mut file) = default_open(match default_join("saved.csv") {
+                        Ok(a) => a,
+                        Err(_) => return
+                    }) else {
+                        return
+                    };
+
+                let mut string = String::new();
+                
+                file.read_to_string(&mut string).unwrap();
+
+                if let Err(err) = export::export(&string ,str) {
                     println!("{:?}", err);
                     return;
                 };
-                if OpenOptions::new()
-                    .write(true)
-                    .truncate(true)
-                    .open(match default_join("saved.csv") {
+
+                let Ok(backup_path) = default_join("backups") else {
+                    return
+                };
+
+                let backup_file = backup_path.join(format!("{}", real_file_name));
+
+                let Ok(mut file) = truncate(backup_file) else {
+                    return
+                };
+
+                write!(file,"{}", string).unwrap();
+
+                if truncate(
+                    match default_join("saved.csv") {
                         Ok(a) => a,
                         Err(_) => return
-                    })
-                    .is_err()
+                    }
+                ).is_err()
                 {
                     return;
                 };
             }
         });
+    parsed_output!((), {
+        Ok(())
+    })
 }
 
 
 #[tauri::command]
 fn get_groups() -> String {
     parsed_output!(HashMap<String, Vec<String>>, {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .read(true)
-            .create(true)
-            .open(default_join("groups.csv")?)?;
+        let mut file = default_open(default_join("groups.csv")?)?;
 
         let mut hash = HashMap::new();
         let mut buffer = String::new(); 
@@ -231,17 +261,85 @@ fn set_groups(groups: Vec<(String, Vec<String>)>) -> String {
             buffer.push_str(&format!("{},{}\n", name, line_buffer));
         }
 
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(default_join("groups.csv")?)?;
+        let mut file = truncate(default_join("groups.csv")?)?;
         write!(file, "{}", buffer)?;
         Ok(())
     })
 }
 
+#[tauri::command]
+fn read_backups() -> String {
+    parsed_output!(Vec<String>, {
+        let read_dir = default_join("backups")?.read_dir()?;
+
+        let filtered = read_dir.filter(|a| {
+            let Ok(a) = a else {
+                return false
+            };
+            let path = a.path();
+            let Some(ext) = path.extension() else {
+                return false
+            };
+
+            if ext != "csv" {
+                return false
+            }
+
+            true
+        })
+        .flatten()
+        .map(|a| a.file_name().to_string_lossy().to_string())
+        .collect::<Vec<String>>();
+
+
+        Ok(filtered)
+    })
+}
+
+#[tauri::command]
+fn re_export(backup: String) -> String{
+    tauri::api::dialog::FileDialogBuilder::new()
+        .add_filter("xlsx", &["xlsx"])
+        .set_file_name("sheet.xlsx")
+        .save_file(|file| {
+            let Some(file) = file else {
+                return
+            };
+            let Some(file_str) = file.to_str() else {
+                return
+            };
+            let Ok(backups_path) = default_join("backups") else {
+                return
+            };
+            let Ok(mut backup_file) = default_open(backups_path.join(backup)) else {
+                return
+            };
+            let mut string = String::new();
+
+            if backup_file.read_to_string(&mut string).is_err() {
+                return
+            };
+
+            if export::export(&string, file_str).is_err() {
+                return
+            };
+
+        });
+    parsed_output!((),{
+        Ok(())
+    })
+}
+
 fn main() {
+    let system = sysinfo::System::new_all();
+    let is_first_instance_win = system.processes_by_exact_name("RsGrill").collect::<Vec<&Process>>().len() < 2;
+    let is_first_instance = system.processes_by_exact_name("rs-grill").collect::<Vec<&Process>>().len() < 2;
+    
+    if !is_first_instance || !is_first_instance_win {
+        tauri::api::dialog::blocking::message(None::<&Window>, "Duplicata", "Esse computador já possui uma instancia desse programa rodando");
+        exit(1);
+    }
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             file,
@@ -250,11 +348,12 @@ fn main() {
             is_cache_empty,
             update_products,
             get_groups,
-            set_groups
+            set_groups,
+            read_backups,
+            re_export
         ])
         .on_window_event(|ev| match ev.event() {
             WindowEvent::CloseRequested { api, .. } => {
-                // if 
                 let window = ev.window();
                 let api = api.clone();
                 api.prevent_close();

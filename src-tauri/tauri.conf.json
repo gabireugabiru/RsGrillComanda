@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "RsGrill",
-    "version": "0.0.0"
+    "version": "0.1.0"
   },
   "tauri": {
     "allowlist": {
@@ -26,6 +26,10 @@
       }
     },
     "bundle": {
+      "shortDescription": "Um sistema de comanda feito para o Rs Grill",
+      "longDescription": "Um programa para gerenciar e gerar relatorio baseado em comandas entradas no programa",
+      "category": "finance",
+      "publisher": "Gabireu Gabiru",
       "active": true,
       "icon": [
         "icons/32x32.png",

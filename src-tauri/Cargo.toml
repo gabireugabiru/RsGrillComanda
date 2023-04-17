@@ -1,8 +1,8 @@
 [package]
 name = "rsgrill"
 version = "0.0.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Um sistema de comanda feito para o Rs Grill"
+authors = ["Gabireu Gabiru"]
 license = ""
 repository = ""
 edition = "2021"
@@ -19,6 +19,7 @@ serde_json = "1.0"
 rsgrill-ui = { path = "../" }
 xlsxwriter = "0.5.0"
 home = "0.5.4"
+sysinfo = "0.28.4"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

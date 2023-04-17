@@ -1,5 +1,6 @@
 @use 'header';
 @use 'comandas';
+@use 'backups';
 @use 'configs';
 @use 'mixins';
 
@@ -96,7 +97,6 @@ main>div.main {
       padding: .5rem;
       @include mixins.flex(center, center);
       cursor: pointer;
-      // border: 2px solid transparent;
     }
 
     >div.selected {

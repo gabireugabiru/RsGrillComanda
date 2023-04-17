@@ -1,0 +1,24 @@
+@use 'mixins';
+
+main>div.main.backups {
+    h2 {
+        width: 80%;
+        border-radius: 8px;
+        padding: 1rem;
+        background: #242526;
+        text-align: center;
+    }
+
+    div.list_item {
+        width: 80%;
+        border-radius: 8px;
+        padding: 1rem;
+        background: #242526;
+        margin-bottom: 1rem;
+        @include mixins.flex($justify: space-between);
+
+        >button {
+            @include mixins.default_button;
+        }
+    }
+}

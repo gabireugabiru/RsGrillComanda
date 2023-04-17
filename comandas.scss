@@ -1,6 +1,6 @@
 @use 'mixins';
 
-main>div.main {
+main>div.main.comandas {
     >div.top_info {
         width: 80%;
         max-width: 80%;
@@ -176,23 +176,40 @@ main>div.main {
                         z-index: 1;
                         background: #242526;
                         border: 2px solid #6ddc45;
+                        padding: .5rem;
                         border-radius: 8px;
                         overflow-y: auto;
                         overflow-x: hidden;
 
-                        >header {
-                            @include mixins.flex($justify: space-between);
-                            font-size: 1.3rem;
-                            color: red;
-                            padding: 6px 1rem 0 1rem;
+                        >div.selected {
+                            background: #ccc;
+                            color: black;
+                            border-radius: 8px;
+                        }
 
-                            >span:last-child {
-                                cursor: pointer;
-                            }
+                        >header {
+                            cursor: pointer;
+                            position: sticky;
+                            top: .5rem;
+                            right: .5rem;
+                            left: 95%;
+                            font-size: 1.3rem;
+                            width: 5%;
+                            height: 2rem;
+                            border-radius: 8px;
+                            z-index: 3;
+                            @include mixins.flex;
+                            background: red;
+                            color: white;
+                            font-weight: bolder;
+                        }
+
+                        div.first {
+                            margin-top: -2rem;
                         }
 
                         >div {
-                            padding: 0 1rem;
+                            padding: 4px 1rem;
                             cursor: pointer;
                         }
 
@@ -264,6 +281,12 @@ main>div.main {
                     border-right: none;
                     border-top-right-radius: 0px;
                     border-bottom-right-radius: 0px;
+                }
+
+                button {
+                    @include mixins.default_button;
+                    padding: 6px;
+                    font-size: 2rem;
                 }
 
             }

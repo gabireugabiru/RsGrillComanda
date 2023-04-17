@@ -7,6 +7,7 @@ use yew::Reducible;
 pub enum Pages {
     Main,
     Configs,
+    Backups,
 }
 impl Default for Pages {
     fn default() -> Self {

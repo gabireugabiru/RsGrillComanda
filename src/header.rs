@@ -1,7 +1,7 @@
 use web_sys::console;
 use yew::{
-    classes, function_component, html, platform::spawn_local,
-    use_state, Callback, Html, Properties, UseReducerHandle,
+    classes, function_component, html, platform::spawn_local, use_state,
+    Callback, Html, Properties, UseReducerHandle,
 };
 
 use crate::{
@@ -37,43 +37,54 @@ pub fn header(Props { state }: &Props) -> Html {
                         };
                     } else {
                         window
-                        .alert_with_message("Não existe nenhuma comanda salva no momento").unwrap();
+                            .alert_with_message(
+                                "Não existe nenhuma comanda salva no momento",
+                            )
+                            .unwrap();
                     }
                 });
                 is_confirm.set(false);
             } else {
                 is_confirm.set(true);
                 let is_confirm = is_confirm.clone();
-                let timeout = gloo_timers::callback::Timeout::new(
-                    2000,
-                    move || is_confirm.set(false),
-                );
+                let timeout =
+                    gloo_timers::callback::Timeout::new(2000, move || {
+                        is_confirm.set(false)
+                    });
                 timeout.forget();
             }
         })
     };
     let configs = {
         let state = state.clone();
-        Callback::from(
-            move |_: yew::html::onclick::Event| match state.pages {
-                Pages::Configs => {}
-                _ => state.dispatch(Actions::SetPage(Pages::Configs)),
-            },
-        )
+        Callback::from(move |_: yew::html::onclick::Event| match state.pages {
+            Pages::Configs => {}
+            _ => state.dispatch(Actions::SetPage(Pages::Configs)),
+        })
     };
     let main = {
         let state = state.clone();
-        Callback::from(
-            move |_: yew::html::onclick::Event| match state.pages {
-                Pages::Main => {}
-                _ => state.dispatch(Actions::SetPage(Pages::Main)),
-            },
-        )
+        Callback::from(move |_: yew::html::onclick::Event| match state.pages {
+            Pages::Main => {}
+            _ => state.dispatch(Actions::SetPage(Pages::Main)),
+        })
+    };
+    let backups = {
+        let state = state.clone();
+        Callback::from(move |_: yew::html::onclick::Event| match state.pages {
+            Pages::Backups => {}
+            _ => state.dispatch(Actions::SetPage(Pages::Backups)),
+        })
     };
     html! {
         <header class="main">
             <img src="/public/espetaria_light.png" />
             <div>
+                <button onclick={backups} class={classes!(if state.pages == Pages::Backups {
+                    "selected"
+                } else {""})}>
+                    {"Backups"}
+                </button>
                 <button onclick={main} class={classes!(if state.pages == Pages::Main {
                     "selected"
                 } else {""})}>
