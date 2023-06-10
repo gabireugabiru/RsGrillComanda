@@ -2,10 +2,39 @@
 @use 'comandas';
 @use 'backups';
 @use 'configs';
+@use 'stock';
+
 @use 'mixins';
 
 * {
   box-sizing: border-box;
+}
+
+
+h2.title {
+  width: 80%;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #242526;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+input.default {
+  background: #1b1b1d;
+  border: 2px solid #bbb;
+  border-radius: 8px;
+  padding: 6px;
+  outline: none;
+
+  &:focus {
+    border: 2px solid #6ddc45;
+  }
+}
+
+input.default:disabled {
+  color: #aaa;
+  border: 1px solid #aaa;
 }
 
 body {

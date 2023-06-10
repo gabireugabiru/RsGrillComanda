@@ -4,22 +4,22 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use shared::payment::Payment;
+use shared::{errors::InError, payment::Payment};
 use xlsxwriter::{Format, Workbook, Worksheet};
 
 #[derive(Default, Debug)]
 pub struct Value {
-    name: String,
-    unit_price: f64,
-    total: f64,
-    quantity: f64,
+    pub name: String,
+    pub unit_price: f64,
+    pub total: f64,
+    pub quantity: f64,
 }
 #[derive(Default, Debug)]
 pub struct Comand {
-    name: String,
-    values: Vec<Value>,
-    total: f64,
-    payment: Payment,
+    pub name: String,
+    pub values: Vec<Value>,
+    pub total: f64,
+    pub payment: Payment,
 }
 #[derive(Clone, Copy, Debug)]
 pub struct Position {
@@ -77,12 +77,7 @@ pub fn calc_payment(
     format: Option<&Format>,
     format2: Option<&Format>,
 ) -> Result<(), Box<dyn Error>> {
-    sheet.write_string(
-        position.row,
-        position.col as u16,
-        title,
-        format,
-    )?;
+    sheet.write_string(position.row, position.col as u16, title, format)?;
     sheet.merge_range(
         position.row,
         position.col as u16 + 1,
@@ -92,13 +87,17 @@ pub fn calc_payment(
         format,
     )?;
 
-    let value = comands.iter().fold(0.0, |acc, i| {
-        if i.payment == ty {
-            acc + i.total
-        } else {
-            acc
-        }
-    });
+    let value =
+        comands.iter().fold(
+            0.0,
+            |acc, i| {
+                if i.payment == ty {
+                    acc + i.total
+                } else {
+                    acc
+                }
+            },
+        );
     let mut form = String::from("=");
 
     for total_pos in &total_pos.vec {
@@ -123,10 +122,7 @@ pub fn calc_payment(
     Ok(())
 }
 
-pub fn export(
-    contents: &str,
-    path: &str,
-) -> Result<(), Box<dyn Error>> {
+pub fn get_comands(contents: &str) -> Result<Vec<Comand>, Box<dyn Error>> {
     let mut comands = Vec::<Comand>::new();
 
     {
@@ -146,23 +142,123 @@ pub fn export(
                 comand.values.push(Value {
                     name: splited[0].to_owned(),
                     quantity: splited[1].parse()?,
-                    unit_price: splited[2]
-                        .replace("R$", "")
-                        .parse()?,
+                    unit_price: splited[2].replace("R$", "").parse()?,
                     total: splited[3].replace("R$", "").parse()?,
                 });
                 continue;
             }
             if splited.len() == 3 {
                 comand.payment = splited[1].to_string().into();
-                comand.total =
-                    splited[2].replace("R$", "").parse()?;
+                comand.total = splited[2].replace("R$", "").parse()?;
                 continue;
             } else {
                 comand.name = line.to_owned();
             }
         }
     }
+    Ok(comands)
+}
+
+pub fn ok<A>(option: Option<A>) -> Result<A, InError> {
+    option.ok_or_else(|| InError {
+        a: "None in option".to_string(),
+    })
+}
+
+pub fn multi_export(
+    total: f64,
+    payed: HashMap<Payment, f64>,
+    items: HashMap<String, (f64, f64)>,
+    path: &str,
+) -> Result<(), Box<dyn Error>> {
+    let book = Workbook::new(path)?;
+    let mut sheet = book.add_worksheet(None)?;
+    let default = book
+        .add_format()
+        .set_align(xlsxwriter::FormatAlignment::VerticalCenter)
+        .set_align(xlsxwriter::FormatAlignment::Left)
+        .set_border(xlsxwriter::FormatBorder::Thin);
+    let highlighted = book
+        .add_format()
+        .set_num_format("R$0.00")
+        .set_align(xlsxwriter::FormatAlignment::VerticalCenter)
+        .set_align(xlsxwriter::FormatAlignment::Left)
+        .set_border(xlsxwriter::FormatBorder::Thin)
+        .set_bold()
+        .set_bg_color(xlsxwriter::FormatColor::Custom(0xd7d7d9));
+    const COL: u16 = 1;
+    const ROW: u32 = 1;
+    sheet.set_default_row(30.0, false);
+    sheet.set_column_pixels(COL, COL + 5 as u16, 180, None)?;
+
+    sheet.write_string(ROW, COL, "Bruto", Some(&default))?;
+    sheet.write_string(ROW + 1, COL, &Payment::Debit.to_string(), Some(&default))?;
+    sheet.write_string(
+        ROW + 2,
+        COL,
+        &Payment::Credit.to_string(),
+        Some(&default),
+    )?;
+    sheet.write_string(ROW + 3, COL, &Payment::Money.to_string(), Some(&default))?;
+    sheet.write_string(ROW + 4, COL, &Payment::Pix.to_string(), Some(&default))?;
+
+    sheet.write_number(ROW, COL + 1, total, Some(&highlighted))?;
+
+    sheet.write_number(
+        ROW + 1,
+        COL + 1,
+        *ok(payed.get(&Payment::Debit))?,
+        Some(&highlighted),
+    )?;
+    sheet.write_number(
+        ROW + 2,
+        COL + 1,
+        *ok(payed.get(&Payment::Credit))?,
+        Some(&highlighted),
+    )?;
+    sheet.write_number(
+        ROW + 3,
+        COL + 1,
+        *ok(payed.get(&Payment::Money))?,
+        Some(&highlighted),
+    )?;
+    sheet.write_number(
+        ROW + 4,
+        COL + 1,
+        *ok(payed.get(&Payment::Pix))?,
+        Some(&highlighted),
+    )?;
+
+    let start_row = 6;
+    sheet.write_string(ROW + start_row, COL, "Produto", Some(&default))?;
+    sheet.write_string(ROW + start_row, COL + 1, "Vendidos", Some(&default))?;
+    sheet.write_string(ROW + start_row, COL + 2, "Vendidos(R$)", Some(&default))?;
+
+    for (i, (name, (value, quantity))) in items.iter().enumerate() {
+        sheet.write_string(
+            ROW + start_row + 1 + i as u32,
+            COL as u16,
+            name,
+            Some(&default),
+        )?;
+        sheet.write_number(
+            ROW + start_row + 1 + i as u32,
+            COL + 1,
+            *quantity,
+            Some(&default),
+        )?;
+        sheet.write_number(
+            ROW + start_row + 1 + i as u32,
+            COL + 2,
+            *value,
+            Some(&highlighted),
+        )?;
+    }
+
+    Ok(())
+}
+
+pub fn export(comands: &Vec<Comand>, path: &str) -> Result<(), Box<dyn Error>> {
     let book = Workbook::new(path)?;
     let mut sheet = book.add_worksheet(None)?;
     let format = book
@@ -194,40 +290,22 @@ pub fn export(
     const ROW: u32 = 1;
     let mut row = ROW;
     let mut total_pos = Positions::default();
-    let mut quantities: HashMap<String, (Positions, u32)> =
-        HashMap::new();
+    let mut quantities: HashMap<String, (Positions, u32)> = HashMap::new();
 
     let mut products: HashMap<&str, f64> = HashMap::new();
 
     sheet.set_default_row(30.0, false);
-    for i in &comands {
+    for i in comands {
         // COMAND AND HEADER
         sheet.set_column_pixels(COL, COL, 150, None)?;
         sheet.set_column_pixels(COL + 1, COL + 3, 80, None)?;
 
         sheet.write_string(row, COL, "Comanda", Some(&format))?;
-        sheet.merge_range(
-            row,
-            COL + 1,
-            row,
-            COL + 3,
-            &i.name,
-            Some(&format3),
-        )?;
+        sheet.merge_range(row, COL + 1, row, COL + 3, &i.name, Some(&format3))?;
         row += 1;
         sheet.write_string(row, COL, "Pedido", Some(&format))?;
-        sheet.write_string(
-            row,
-            COL + 1,
-            "Unidades",
-            Some(&format),
-        )?;
-        sheet.write_string(
-            row,
-            COL + 2,
-            "Unitario",
-            Some(&format),
-        )?;
+        sheet.write_string(row, COL + 1, "Unidades", Some(&format))?;
+        sheet.write_string(row, COL + 2, "Unitario", Some(&format))?;
         sheet.write_string(row, COL + 3, "Total", Some(&format))?;
 
         row += 1;
@@ -236,24 +314,9 @@ pub fn export(
         let mut form_pos = Positions::default();
         for value in &i.values {
             products.insert(&value.name, value.unit_price);
-            sheet.write_string(
-                row,
-                COL,
-                &value.name,
-                Some(&format),
-            )?;
-            sheet.write_number(
-                row,
-                COL + 1,
-                value.quantity,
-                Some(&format1),
-            )?;
-            sheet.write_number(
-                row,
-                COL + 2,
-                value.unit_price,
-                Some(&format),
-            )?;
+            sheet.write_string(row, COL, &value.name, Some(&format))?;
+            sheet.write_number(row, COL + 1, value.quantity, Some(&format1))?;
+            sheet.write_number(row, COL + 2, value.unit_price, Some(&format))?;
 
             sheet.write_formula_num(
                 row,
@@ -287,20 +350,8 @@ pub fn export(
         }
         // TOTAL
         sheet.write_string(row, COL, "Total: ", Some(&format))?;
-        sheet.write_string(
-            row,
-            COL + 1,
-            &i.payment.to_string(),
-            Some(&format),
-        )?;
-        sheet.merge_range(
-            row,
-            COL + 2,
-            row,
-            COL + 3,
-            "",
-            Some(&format),
-        )?;
+        sheet.write_string(row, COL + 1, &i.payment.to_string(), Some(&format))?;
+        sheet.merge_range(row, COL + 2, row, COL + 3, "", Some(&format))?;
         sheet.write_formula_num(
             row,
             COL + 2,
@@ -314,14 +365,7 @@ pub fn export(
 
     let bruto = comands.iter().fold(0.0, |acc, i| acc + i.total);
     sheet.write_string(ROW, COL + 5, "Bruto", Some(&format))?;
-    sheet.merge_range(
-        ROW,
-        COL + 6,
-        ROW,
-        COL + 7,
-        "",
-        Some(&format2),
-    )?;
+    sheet.merge_range(ROW, COL + 6, ROW, COL + 7, "", Some(&format2))?;
     sheet.write_formula_num(
         ROW,
         COL + 6,
@@ -372,19 +416,13 @@ pub fn export(
             Some(&format2),
         )?;
     }
-    let mut vec: Vec<(&String, &(Positions, u32))> =
-        quantities.iter().collect();
+    let mut vec: Vec<(&String, &(Positions, u32))> = quantities.iter().collect();
     vec.sort_by(|a, b| a.0.cmp(b.0));
 
     sheet.set_column_pixels(COL + 9, COL + 9, 150, None)?;
 
     for (i, value) in vec.iter().enumerate() {
-        sheet.write_string(
-            ROW + i as u32,
-            COL + 9,
-            value.0,
-            Some(&format),
-        )?;
+        sheet.write_string(ROW + i as u32, COL + 9, value.0, Some(&format))?;
 
         sheet.write_formula_num(
             ROW + i as u32,

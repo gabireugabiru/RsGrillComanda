@@ -37,6 +37,7 @@ pub fn input_auto(
     }: &Props,
 ) -> Html {
     let is_open = use_state(|| false);
+
     let selected = use_state(|| 0usize);
     let mut filterd_autocomplete: Vec<_> = if value.to_string().is_empty() {
         Vec::new()
@@ -47,6 +48,7 @@ pub fn input_auto(
             .cloned()
             .collect()
     };
+
     filterd_autocomplete.sort_by(|_, a| a.cmp(&value.to_string()));
     let real_selected = if !filterd_autocomplete.is_empty() {
         selected.min(filterd_autocomplete.len() - 1)
@@ -103,11 +105,8 @@ pub fn input_auto(
         })
     };
 
-    if filterd_autocomplete.len() == 1 {
-        let first = filterd_autocomplete.first().unwrap();
-        if first.trim() == value.trim() {
-            autocomplete = false;
-        }
+    if complete.contains(&value.trim().to_string()) {
+        autocomplete = false
     }
 
     autocomplete = autocomplete && *is_open;
@@ -128,7 +127,6 @@ pub fn input_auto(
             }
         })
         .collect();
-
     let focus = {
         let is_open = is_open.clone();
         Callback::from(move |_: yew::html::onfocus::Event| {
@@ -139,6 +137,16 @@ pub fn input_auto(
         let is_open = is_open.clone();
         Callback::from(move |_: yew::html::onclick::Event| {
             is_open.set(false);
+        })
+    };
+    let onfocus_out = {
+        let is_open = is_open.clone();
+        Callback::from(move |_: yew::html::onfocusout::Event| {
+            let is_open = is_open.clone();
+            if *is_open {
+                gloo_timers::callback::Timeout::new(200, move || is_open.set(false))
+                    .forget();
+            }
         })
     };
     html! {
@@ -153,7 +161,7 @@ pub fn input_auto(
                     {complete}
                 </div>
             }
-            <input onfocus={focus} onkeyup={keychange} autocomplete="off" onkeydown={Callback::from(|ev: yew::html::onkeydown::Event| {
+            <input onfocusout={onfocus_out} onfocus={focus} onkeyup={keychange} autocomplete="off" onkeydown={Callback::from(|ev: yew::html::onkeydown::Event| {
                 let key = ev.key();
                 if key == "ArrowDown" {
                     ev.prevent_default();

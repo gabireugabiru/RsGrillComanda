@@ -19,8 +19,8 @@ pub struct Props {
     pub state: UseReducerHandle<ApplicationState>,
 }
 
-#[function_component(MainPage)]
-pub fn mainpage(Props { state }: &Props) -> Html {
+#[function_component]
+pub fn MainPage(Props { state }: &Props) -> Html {
     let exchange = use_state(|| 0.0);
     if let Some(selected) = state.selected_comand.clone() {
         let (inputs, payment) = match state.comands.get(&selected).cloned() {
@@ -50,7 +50,6 @@ pub fn mainpage(Props { state }: &Props) -> Html {
             let state = state.clone();
             let selected = selected.clone();
             Callback::from(move |_: yew::html::onclick::Event| {
-
                 // FORCE A PAYMENT SELECTED
                 if payment == Payment::NotSelected {
                     alert!(window() => "Selecione um metodo de pagamento");
@@ -58,14 +57,45 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                 }
                 let state = state.clone();
                 let selected = selected.clone();
-          
                 spawn_local(async move {
+                    let win = window();
 
                     // GET SELECTED COMAND
                     let Some(mut values) =
                         state.comands.get(&selected).cloned() else {
                             return
                         };
+                    
+                    // let groups = &state.groups;
+
+                    let mut error = String::new();
+
+                    let validated = values.0.iter().fold(true, |prev, input| {
+                        let Some((_, group_name)) = state.products.get(input.name.trim()) else {
+                            return prev
+                        };
+
+                        if group_name.is_none() {
+                            return prev
+                        }
+
+                        let Some(valid_groups) = state.groups.get(group_name.as_ref().unwrap()) else {
+                            return prev
+                        };
+
+                        if let Some(a) = &&input.group {
+                            if valid_groups.contains(a) {
+                                
+                                return prev
+                            }
+                        }
+                        error = format!("Escolha um valor no grupo de '{}'", input.name); 
+                        false
+                    });
+
+                    if !validated {
+                        alert!(win => "{}", error);
+                    }
 
                     //CONVERT THE COMAND FOR BACKEND VALUES
                     let values: Vec<BackendInput> = values.0
@@ -89,12 +119,11 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                         })
                         .collect();
 
-                    let win = window();
-
-                    if values.is_empty() {
-                        alert!(win => "Comanda vazia");
-                        return;
-                    }
+                        if values.is_empty() {
+                            alert!(win => "Comanda vazia");
+                            return;
+                        }
+                 
 
                     if !state.confirm_finalize {
                         state.dispatch(Actions::ConfirmFinalize);
@@ -279,7 +308,9 @@ pub fn mainpage(Props { state }: &Props) -> Html {
                 };
 
                 let mut hidden = true;
+                
                 let mut group_name = None::<String>;
+                
                 let price = match state.products.get(&info.name.trim().to_ascii_lowercase()) {
                     Some(a) => {
                         hidden = a.1.is_none();

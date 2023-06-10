@@ -109,9 +109,9 @@ pub fn configs(Props { state }: &Props) -> Html {
                    
                     if (*edit).clone() == name.clone() {
                         <form onsubmit={onfinalize}>
-                            <input type="text" id={format!("name-{}", name.clone())} value={name.clone()} />
-                            <input type="number" step="any" id={format!("price-{}", name.clone())} value={value.0.to_string()} />
-                            <input type="text" class="group" id={format!("group-{}", name.clone())} value={if let Some(group) = value.1.clone() {
+                            <input class="default" type="text" id={format!("name-{}", name.clone())} value={name.clone()} />
+                            <input class="default" type="number" step="any" id={format!("price-{}", name.clone())} value={value.0.to_string()} />
+                            <input class="default" type="text" class="group" id={format!("group-{}", name.clone())} value={if let Some(group) = value.1.clone() {
                                 group
                             } else {
                                 "".to_string()
@@ -121,9 +121,9 @@ pub fn configs(Props { state }: &Props) -> Html {
                         </form> 
                     } else {
                         <div>
-                            <input type="text"  disabled={true} value={name.clone()}/>
-                            <input type="number"  disabled={true} step="any" value={value.0.to_string()} />
-                            <input type="text" class="group" disabled={true} value={if let Some(group) = value.1.clone() {
+                            <input class="default" type="text"  disabled={true} value={name.clone()}/>
+                            <input class="default" type="number"  disabled={true} step="any" value={value.0.to_string()} />
+                            <input class="default" type="text" class="group" disabled={true} value={if let Some(group) = value.1.clone() {
                                 group
                             } else {
                                 "".to_string()
@@ -177,7 +177,7 @@ pub fn configs(Props { state }: &Props) -> Html {
             <li key={name.clone()} class="groups">
             <div class="group">
                 <div class="group_name">
-                    <input type="text"  disabled={true} value={name.to_string()}  />
+                    <input class="default" type="text"  disabled={true} value={name.to_string()}  />
                     <button class="danger" ondblclick={remove}>
                         {"X"}
                     </button>
@@ -229,7 +229,7 @@ pub fn configs(Props { state }: &Props) -> Html {
                         html! {
                             
                             <form key={i} {onsubmit}>
-                                <input type="text" id={format!("group_{name}_{i}")} value={a.to_string()} />
+                                <input class="default" type="text" id={format!("group_{name}_{i}")} value={a.to_string()} />
                                 <button type="button" class="danger" ondblclick={{
                                     let state = state.clone();
                                     let name = name.clone();
@@ -295,7 +295,7 @@ pub fn configs(Props { state }: &Props) -> Html {
                                 });
                             })
                         }}>
-                            <input type="text" id={format!("new_value_{name}")} />
+                            <input class="default" type="text" id={format!("new_value_{name}")} />
                             <button type="submit">
                                 {"Adicionar"}
                             </button> 
@@ -388,7 +388,7 @@ pub fn configs(Props { state }: &Props) -> Html {
                     <li class="products"> {"Novo Grupo"} </li>
                     <li class="groups">
                         <form class="new_group" onsubmit={new_group}>
-                            <input type="text" id="new_group_name"/>
+                            <input class="default" type="text" id="new_group_name"/>
                             <button type="submit">
                                 {"Adicionar"}
                             </button>
@@ -399,9 +399,9 @@ pub fn configs(Props { state }: &Props) -> Html {
                     <li class="products">{"Novo Produto"}</li>
                     <li class="products new" >
                         <form onsubmit={onfinalize}>
-                            <input type="text" id="new_product_name" />
-                            <input type="number" step="any" id="new_product_price" />
-                            <input type="text" class="group" id="new_product_group" />
+                            <input class="default" type="text" id="new_product_name" />
+                            <input class="default" type="number" step="any" id="new_product_price" />
+                            <input class="default" type="text" class="group" id="new_product_group" />
                             <button type="submit">
                             {"Adicionar"}
                             </button>

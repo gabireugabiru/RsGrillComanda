@@ -8,22 +8,7 @@ main>div.main.configs {
         border-radius: 8px;
         background: #242526;
 
-        input {
-            background: #1b1b1d;
-            border: 2px solid #bbb;
-            border-radius: 8px;
-            padding: 6px;
-            outline: none;
 
-            &:focus {
-                border: 2px solid #6ddc45;
-            }
-        }
-
-        input:disabled {
-            color: #aaa;
-            border: 1px solid #aaa;
-        }
 
         input[type="number"] {
             max-width: 150px;

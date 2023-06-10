@@ -1,8 +1,8 @@
+use std::hash::Hash;
+
 use serde::{Deserialize, Serialize};
 
-#[derive(
-    Clone, Copy, Eq, PartialEq, Debug, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Payment {
     Pix,
     Debit,
@@ -46,6 +46,11 @@ impl ToString for Payment {
             Self::Money => "Dinheiro",
         }
         .to_string()
+    }
+}
+impl Hash for Payment {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.to_string().hash(state)
     }
 }
 impl Default for Payment {

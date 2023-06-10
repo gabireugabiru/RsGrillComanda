@@ -8,6 +8,7 @@ pub enum Pages {
     Main,
     Configs,
     Backups,
+    Stock,
 }
 impl Default for Pages {
     fn default() -> Self {
@@ -39,10 +40,7 @@ pub enum Actions {
 
 impl Reducible for ApplicationState {
     type Action = Actions;
-    fn reduce(
-        self: std::rc::Rc<Self>,
-        action: Self::Action,
-    ) -> std::rc::Rc<Self> {
+    fn reduce(self: std::rc::Rc<Self>, action: Self::Action) -> std::rc::Rc<Self> {
         let mut new_state = (*self).clone();
         new_state.confirm_finalize = false;
         match action {
@@ -53,17 +51,14 @@ impl Reducible for ApplicationState {
                 match new_state.comands.get_mut(&comand) {
                     Some(inputs) => inputs.0.push(input),
                     None => {
-                        new_state.comands.insert(
-                            comand,
-                            (vec![input], Payment::default()),
-                        );
+                        new_state
+                            .comands
+                            .insert(comand, (vec![input], Payment::default()));
                     }
                 }
             }
             Actions::UpdateInput(comand, input, pos) => {
-                if let Some(inputs) =
-                    new_state.comands.get_mut(&comand)
-                {
+                if let Some(inputs) = new_state.comands.get_mut(&comand) {
                     inputs.0[pos] = input
                 }
             }
@@ -73,10 +68,7 @@ impl Reducible for ApplicationState {
                     if new_state.comands.get(&name).is_none() {
                         new_state.comands.insert(
                             name.clone(),
-                            (
-                                vec![Input::default()],
-                                Payment::default(),
-                            ),
+                            (vec![Input::default()], Payment::default()),
                         );
                         new_state.selected_comand = Some(name);
                     }

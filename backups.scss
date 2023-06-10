@@ -1,24 +1,85 @@
 @use 'mixins';
 
 main>div.main.backups {
-    h2 {
+
+
+    div.export_selected {
         width: 80%;
-        border-radius: 8px;
-        padding: 1rem;
-        background: #242526;
-        text-align: center;
+
+        >button {
+            @include mixins.default_button;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
     }
 
     div.list_item {
         width: 80%;
         border-radius: 8px;
-        padding: 1rem;
+        padding: 1.5rem 1rem;
+        font-weight: bolder;
         background: #242526;
         margin-bottom: 1rem;
         @include mixins.flex($justify: space-between);
 
-        >button {
-            @include mixins.default_button;
+        >div {
+            @include mixins.flex($justify: start);
+
+            >button.checkbox {
+                min-width: 50px;
+                min-height: 50px;
+                width: 50px;
+                height: 50px;
+                border: 2px solid white;
+                border-radius: 8px;
+                height: 100%;
+                color: transparent;
+                background: transparent;
+                margin-right: 2rem;
+
+                svg {
+                    width: 80%;
+                    height: 80%;
+                    margin: 0;
+
+                }
+
+                @media only screen and (min-width: 1400px) {
+                    min-width: 60px;
+                    min-height: 60px;
+                    width: 60px;
+                    height: 60px;
+                }
+
+                @media only screen and (max-width: 1100px) {
+                    min-width: 40px;
+                    min-height: 40px;
+                    width: 40px;
+                    height: 40px;
+                }
+
+                @media only screen and (max-width: 850px) {
+                    min-width: 30px;
+                    min-height: 30px;
+                    width: 30px;
+                    height: 30px;
+                }
+            }
+
+            >button.checkbox.checked {
+                background: #6ddc45;
+            }
+
+            >button.export {
+                @include mixins.default_button;
+            }
         }
+
+    }
+
+    div.list_item.lesser {
+        font-weight: normal;
+        width: calc(80% - 4rem);
+        padding: 1rem;
     }
 }

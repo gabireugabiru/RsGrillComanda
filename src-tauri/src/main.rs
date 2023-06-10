@@ -1,9 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod export;
 mod macros;
+use chrono::{Local, Datelike};
 use macros::parsed_output;
 use shared::comand::Comand;
 use shared::errors::InError;
+use shared::payment::Payment;
 use sysinfo::{SystemExt, Process};
 use std::fs::File;
 use std::io::Write;
@@ -23,10 +25,11 @@ fn default_join(file: &'static str) -> Result<PathBuf, InError>{
         return Err(InError { a: String::from("Failed to find home") })
     };
     home = home.join(RS_GRILL_FOLDER);
-    home = home.join(file);
+    
     if !Path::new(&home).exists() {
         std::fs::create_dir_all(&home)?;
     };
+    home = home.join(file);
     Ok(home)
 }
 
@@ -53,6 +56,44 @@ fn append<T>(path: T) -> Result<File, std::io::Error> where T: AsRef<Path> {
 }
 
 
+
+#[tauri::command]
+fn update_stock(stock: Vec<(String, u64)>) -> String {
+    parsed_output!((),{
+        let mut buffer = String::new();
+
+        for i in stock {
+            buffer.push_str(&format!("{},{}\n", i.0,i.1));
+        }
+
+        let mut file = truncate(default_join("stock.csv")?)?;
+        write!(file,"{}", buffer)?;
+        Ok(())
+    })
+}
+
+#[tauri::command]
+fn read_stock() -> String {
+    parsed_output!(HashMap<String, u64>, {
+        let mut hash = HashMap::new();
+        let mut file = default_open(default_join("stock.csv")?)?;
+
+        let mut buffer = String::new();
+        file.read_to_string(&mut buffer)?;
+        let lines = buffer.lines();
+
+        for line in lines {
+            let values: Vec<&str> = line.split(',').collect();
+            if values.len() == 2 {
+                let name = values[0];
+                let quantity = values[1].parse::<u64>()?;
+                hash.insert(name.to_string(), quantity);
+            }
+        }
+
+        Ok(hash)
+    })
+}
 
 #[tauri::command]
 fn file() -> String {
@@ -161,9 +202,15 @@ fn is_cache_empty() -> String {
 
 #[tauri::command]
 fn export() -> String {
+    let date = Local::now();
+    let year = date.year().to_string();
+    let mut chars = year.chars().collect::<Vec<char>>();
+    let two_last_digits = chars.split_off(2);
+
+
     tauri::api::dialog::FileDialogBuilder::new()
         .add_filter("xlsx", &["xlsx"])
-        .set_file_name("sheet.xlsx")
+        .set_file_name(&format!("{}-{}-{}.xlsx", date.day(), date.month(), two_last_digits.iter().collect::<String>()))
         .save_file(|f| {
             if let Some(path) = f {
                 let mut other_path = path.clone();
@@ -188,8 +235,10 @@ fn export() -> String {
                 let mut string = String::new();
                 
                 file.read_to_string(&mut string).unwrap();
-
-                if let Err(err) = export::export(&string ,str) {
+                let Ok(comands) = export::get_comands(&string) else {
+                    return
+                };
+                if let Err(err) = export::export(&comands ,str) {
                     println!("{:?}", err);
                     return;
                 };
@@ -298,9 +347,15 @@ fn read_backups() -> String {
 
 #[tauri::command]
 fn re_export(backup: String) -> String{
+    let mut path = PathBuf::from(&backup);
+    path.set_extension("xlsx");
+    let path = match path.to_str() {
+        Some(a) => a,
+        None => "sheet.xlsx"
+    };
     tauri::api::dialog::FileDialogBuilder::new()
         .add_filter("xlsx", &["xlsx"])
-        .set_file_name("sheet.xlsx")
+        .set_file_name(path)
         .save_file(|file| {
             let Some(file) = file else {
                 return
@@ -308,19 +363,26 @@ fn re_export(backup: String) -> String{
             let Some(file_str) = file.to_str() else {
                 return
             };
+
             let Ok(backups_path) = default_join("backups") else {
                 return
             };
+
             let Ok(mut backup_file) = default_open(backups_path.join(backup)) else {
                 return
             };
+
             let mut string = String::new();
 
             if backup_file.read_to_string(&mut string).is_err() {
                 return
             };
 
-            if export::export(&string, file_str).is_err() {
+            let Ok(comands) = export::get_comands(&string) else {
+                return
+            };
+
+            if export::export(&comands, file_str).is_err() {
                 return
             };
 
@@ -330,9 +392,69 @@ fn re_export(backup: String) -> String{
     })
 }
 
+#[tauri::command]
+fn multi_export(backups: Vec<String>) -> String {
+
+
+    let mut total = 0.0;
+    let mut selled_items = HashMap::<String, (f64, f64)>::new();
+    let mut payed = HashMap::<Payment, f64>::new();
+    for i in Payment::iter() {
+        payed.insert(i, 0.0);
+    }
+    parsed_output!((), {
+        let backups_path = default_join("backups")?;
+        for backup in backups {
+            let mut backup_f = default_open(backups_path.join(&backup))?;
+            let mut string = String::new();
+            backup_f.read_to_string(&mut string)?;
+            let Ok(comands) = export::get_comands(&string) else {
+                return Err(InError {
+                    a: format!("Failed to convert {}", backup)
+                })
+            };
+
+            for comand in comands {
+                total += comand.total;
+                // WILL NEVER UNWRAP SINCE THE HASH IS INITIALIZED WITH ALL VALUES OF PAYMENT
+                let payed = payed.get_mut(&comand.payment).unwrap();
+                *payed += comand.total; 
+                for value in comand.values {
+                    match selled_items.get_mut(&value.name) {
+                        Some(a) => {
+                            a.0 += value.total;
+                            a.1 += value.quantity;
+
+                        }
+                        None => {
+                            selled_items.insert(value.name.clone(), (value.total, value.quantity));
+                        }
+                    }
+                   
+                }
+            }
+        }
+        tauri::api::dialog::FileDialogBuilder::new()
+        .add_filter("xlsx", &["xlsx"])
+        .set_file_name("relatorio.xlsx")
+        .save_file(move |file| {
+            let Some(file) = file else {
+                return
+            };
+            if export::multi_export(total, payed, selled_items, match file.to_str() {
+                Some(a) => a,
+                None => return
+            }).is_err() {
+                return
+            }
+        });
+        
+        Ok(())
+    })
+}
 fn main() {
     let system = sysinfo::System::new_all();
-    let is_first_instance_win = system.processes_by_exact_name("RsGrill").collect::<Vec<&Process>>().len() < 2;
+    let is_first_instance_win = system.processes_by_name("RsGrill").collect::<Vec<&Process>>().len() < 2;
     let is_first_instance = system.processes_by_exact_name("rs-grill").collect::<Vec<&Process>>().len() < 2;
     
     if !is_first_instance || !is_first_instance_win {
@@ -350,7 +472,10 @@ fn main() {
             get_groups,
             set_groups,
             read_backups,
-            re_export
+            re_export,
+            multi_export,
+            update_stock,
+            read_stock
         ])
         .on_window_event(|ev| match ev.event() {
             WindowEvent::CloseRequested { api, .. } => {

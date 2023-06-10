@@ -1,7 +1,7 @@
 use web_sys::console;
 use yew::{
-    classes, function_component, html, platform::spawn_local, use_state,
-    Callback, Html, Properties, UseReducerHandle,
+    classes, function_component, html, platform::spawn_local, use_state, Callback,
+    Html, Properties, UseReducerHandle,
 };
 
 use crate::{
@@ -47,10 +47,9 @@ pub fn header(Props { state }: &Props) -> Html {
             } else {
                 is_confirm.set(true);
                 let is_confirm = is_confirm.clone();
-                let timeout =
-                    gloo_timers::callback::Timeout::new(2000, move || {
-                        is_confirm.set(false)
-                    });
+                let timeout = gloo_timers::callback::Timeout::new(2000, move || {
+                    is_confirm.set(false)
+                });
                 timeout.forget();
             }
         })
@@ -76,10 +75,22 @@ pub fn header(Props { state }: &Props) -> Html {
             _ => state.dispatch(Actions::SetPage(Pages::Backups)),
         })
     };
+    let stock = {
+        let state = state.clone();
+        Callback::from(move |_: yew::html::onclick::Event| match state.pages {
+            Pages::Stock => {}
+            _ => state.dispatch(Actions::SetPage(Pages::Stock)),
+        })
+    };
     html! {
         <header class="main">
             <img src="/public/espetaria_light.png" />
             <div>
+                <button onclick={stock} class={classes!(if state.pages == Pages::Stock {
+                    "selected"
+                } else {""})}>
+                    {"Estoque"}
+                </button>
                 <button onclick={backups} class={classes!(if state.pages == Pages::Backups {
                     "selected"
                 } else {""})}>
@@ -95,6 +106,7 @@ pub fn header(Props { state }: &Props) -> Html {
                 } else {""})}>
                     {"Configurações"}
                 </button>
+
                 <button {onclick} >
 
                     if !(*is_confirm) {

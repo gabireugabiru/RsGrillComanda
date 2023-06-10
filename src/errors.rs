@@ -1,4 +1,8 @@
-use std::{error::Error, num::ParseFloatError, fmt::Display};
+use std::{
+    error::Error,
+    fmt::Display,
+    num::{ParseFloatError, ParseIntError},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -6,6 +10,15 @@ use serde::{Deserialize, Serialize};
 pub struct InError {
     pub a: String,
 }
+
+impl From<ParseIntError> for InError {
+    fn from(value: ParseIntError) -> Self {
+        Self {
+            a: value.to_string(),
+        }
+    }
+}
+
 impl From<std::io::Error> for InError {
     fn from(value: std::io::Error) -> Self {
         Self {

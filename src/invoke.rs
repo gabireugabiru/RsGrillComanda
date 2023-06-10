@@ -30,6 +30,15 @@ pub struct ReExportArgs {
     pub backup: String,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct MultiExportArgs {
+    pub backups: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct UpdateStockArgs {
+    pub stock: Vec<(String, u64)>,
+}
 pub enum Invoke {
     File,
     GetGroups,
@@ -40,6 +49,9 @@ pub enum Invoke {
     UpdateProducts(UpdateArgs),
     ListBakcups,
     ReExport(ReExportArgs),
+    MultiExport(MultiExportArgs),
+    UpdateStock(UpdateStockArgs),
+    ReadStock,
 }
 
 impl Invoke {
@@ -98,8 +110,16 @@ impl Invoke {
                 *buffer = Self::string_invoke("read_backups", ()).await?;
             }
             Self::ReExport(args) => {
-                log!("{:?}", args.backup);
                 *buffer = Self::string_invoke("re_export", args).await?;
+            }
+            Self::MultiExport(args) => {
+                *buffer = Self::string_invoke("multi_export", args).await?;
+            }
+            Self::UpdateStock(args) => {
+                *buffer = Self::string_invoke("update_stock", args).await?;
+            }
+            Self::ReadStock => {
+                *buffer = Self::string_invoke("read_stock", ()).await?;
             }
         };
         serde_json::from_str::<Result<T, InError>>(buffer)?
@@ -113,5 +133,3 @@ macro_rules! invokem {
     }};
 }
 pub(crate) use invokem;
-
-use crate::infra::log;
