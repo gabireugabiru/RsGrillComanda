@@ -1,12 +1,13 @@
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlInputElement, SubmitEvent};
+use wasm_bindgen_futures::spawn_local;
+use web_sys::{HtmlInputElement, SubmitEvent, MouseEvent, Event, KeyboardEvent};
 use yew::{function_component, html, use_state, Callback, Html, Properties, UseReducerHandle};
 
 use crate::{
     header::Header,
     infra::{document, get, alert, window},
     reducer::ApplicationState,
-    stock_state::{StockActions, StockState},
+    stock_state::{StockActions, StockState}, invoke::{invokem, Invoke}, components::select::Select,
 };
 #[derive(PartialEq, Properties)]
 pub struct Props {
@@ -39,14 +40,16 @@ pub fn stock(props: &Props) -> Html {
     let create_name = use_state(String::new);
     let stock_state = &props.stock_state;
     let selected = use_state(Selected::default);
-
+    let filter = use_state(String::default);
     let mut vec: Vec<(String, u64)> = stock_state
         .stock
         .iter()
         .map(|(k, v)| (k.clone(), *v))
         .collect();
     vec.sort_by(|(k, _), (k1, _)| k.cmp(k1));
-
+    if !(*filter).is_empty() {
+        vec = vec.iter().filter(|a| a.0.contains(&(*filter))).cloned().collect();
+    }
     let onsubmit = {
         let stock_state = stock_state.clone();
         let create_name = create_name.clone();
@@ -65,6 +68,44 @@ pub fn stock(props: &Props) -> Html {
         })
     };
 
+    let generate_products = {
+        let state = props.state.clone();
+        let stock_state = stock_state.clone();
+        Callback::from(move |_: MouseEvent| {
+            let vec = state.products.iter().flat_map(|(k, v)| if v.1.is_some() {
+                None
+            } else {
+                Some(k.clone())
+            }).collect();
+            stock_state.dispatch(StockActions::CreateVec(vec));
+        })
+    };
+
+    let generate_group = {
+        let state = props.state.clone();
+        let stock_state = stock_state.clone();
+        Callback::from(move |group: String| {
+            let Some(vec) = state.groups.get(&group) else {
+                return
+            };
+            stock_state.dispatch(StockActions::CreateVec(vec.iter().map(|a| format!("({a})")).collect()))
+        })
+    };
+    let keydown = {
+        let filter =filter.clone();
+        Callback::from(move |ev: KeyboardEvent| {
+            let Some(target) = ev.target() else {
+                return
+            };
+            let Ok(input) = target.dyn_into::<HtmlInputElement>() else {
+                return
+            };
+
+            let value = input.value();
+            filter.set(value);
+        })
+    };
+
     let list = vec
         .iter()
         .map(|a| {
@@ -72,14 +113,20 @@ pub fn stock(props: &Props) -> Html {
                 let selected = selected.clone();
                 let current = a.0.clone();
                 Callback::from(move |_: yew::MouseEvent| {
-                    selected.set(Selected::Add(current.to_string()));
+                    match &(*selected) {
+                        Selected::Add(_) => selected.set(Selected::None),
+                        _ => selected.set(Selected::Add(current.to_string()))
+                    };
                 })
             };
             let change = {
                 let selected = selected.clone();
                 let current = a.0.clone();
                 Callback::from(move |_: yew::MouseEvent| {
-                    selected.set(Selected::Change(current.to_string()));
+                    match &(*selected) {
+                        Selected::Change(_) => selected.set(Selected::None),
+                        _ => selected.set(Selected::Change(current.to_string())) 
+                    }
                 })
             };
 
@@ -110,6 +157,25 @@ pub fn stock(props: &Props) -> Html {
                 })
             };
 
+            let remove = {
+                let stock_state = stock_state.clone();
+                let current = a.0.clone();
+                Callback::from(move |_: MouseEvent| {
+                    let stock_state = stock_state.clone();
+                    let current = current.clone();
+
+                    spawn_local(async move {
+                        let Ok(is_sure) = invokem!(Invoke::Confirm("Confirmação".to_string(), format!("Tem certeza que deseja remover `{current}`")), bool) else {
+                            return
+                        };
+                        if is_sure {
+                            stock_state.dispatch(StockActions::Remove(current.clone()));
+                        }
+                    });
+                })
+            };
+
+
             let form_html = match (*selected).clone() {
                 Selected::Add(value) => {
                     if a.0 != value {
@@ -119,9 +185,9 @@ pub fn stock(props: &Props) -> Html {
                         let onsubmit = create_submit(false, id.clone());
                         html! {
                             <div class="container">
-                                <form {onsubmit} >
-                                    <input class="default" id={id} type="number" />
-                                    <button type="submit">
+                                <form class="extend" {onsubmit} >
+                                    <input class="default extend" id={id} type="number" />
+                                    <button class="default" type="submit">
                                         {"Dar Entrada"}
                                     </button>
                                 </form>
@@ -139,9 +205,9 @@ pub fn stock(props: &Props) -> Html {
 
                         html! {
                             <div class="container">
-                                <form {onsubmit} >
-                                    <input class="default" min={0} id={id} type="number" />
-                                    <button type="submit">
+                                <form class="extend" {onsubmit} >
+                                    <input class="default extend" min={0} id={id} type="number" />
+                                    <button class="default" type="submit">
                                         {"Alterar"}
                                     </button>
                                 </form>
@@ -153,28 +219,40 @@ pub fn stock(props: &Props) -> Html {
                     html! {}
                 }
             };
+
             let sel = selected.value().cloned().unwrap_or_default();
+            let is_open = sel == a.0;
+            let is_change_open = (*selected) == Selected::Change(a.0.clone());
+            let is_add_open = (*selected) == Selected::Add(a.0.clone());
+
             html! {
                 <>
-                    <div class={format!("container {}", if sel != a.0 {
+                    <div class={format!("container {}", if !is_open  {
                         ""
                     } else {
                         "less"
                     })}>
                         <div>
-                            <span>
-                                {&a.0}
+                            <span class="bold">
+                                {a.1}{"x "}
                             </span>
                             <span>
-                                {","} {a.1}
+                               {" "}{&a.0}
                             </span>
                         </div>
                         <div>
-                            <button onclick={change}>
+                            <button class={format!("default {}", if is_change_open {
+                                "selected"
+                            }else { "" } )} onclick={change}>
                                 {"Alterar"}
                             </button>
-                            <button onclick={add}>
+                            <button class={format!("default {}",if is_add_open {
+                                "selected"
+                            } else {""} )} onclick={add}>
                                 {"Entrada"}
+                            </button>
+                            <button class="danger" onclick={remove}>
+                                {"X"}
                             </button>
                         </div>
                     </div>
@@ -183,20 +261,30 @@ pub fn stock(props: &Props) -> Html {
             }
         })
         .collect::<Html>();
+    let groups: Vec<String> = props.state.groups.keys().cloned().collect();
     html! {
         <main>
         <Header state={props.state.clone()} />
             <div class="main stock">
                 <h2 class="title">
-                    {"teste"}
+                    {"Estoque"}
                 </h2>
+                <div class="container">
+                    <input type="text" placeholder="Pesquisar" class="default fill" onkeyup={keydown}/>
+                </div>
                 <div class="container">
                     <form {onsubmit}>
                         <input {onchange} class="default" type="text" />
-                        <button type="submit">
+                        <button class="default" type="submit">
                             {"Criar"}
                         </button>
                     </form>
+                    <div>
+                        <button onclick={generate_products}>
+                            {"Gerar Produtos"}
+                        </button>
+                        <Select selected={"Gerar Grupo"} values={groups}  callback={generate_group}/>
+                    </div>
                 </div>
                 {list}
             </div>

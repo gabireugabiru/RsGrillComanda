@@ -39,6 +39,11 @@ pub struct MultiExportArgs {
 pub struct UpdateStockArgs {
     pub stock: Vec<(String, u64)>,
 }
+#[derive(Serialize, Deserialize)]
+pub struct ConfirmArgs {
+    pub message: String,
+    pub title: String,
+}
 pub enum Invoke {
     File,
     GetGroups,
@@ -52,13 +57,11 @@ pub enum Invoke {
     MultiExport(MultiExportArgs),
     UpdateStock(UpdateStockArgs),
     ReadStock,
+    Confirm(String, String),
 }
 
 impl Invoke {
-    pub async fn string_invoke<T>(
-        a: &'static str,
-        args: T,
-    ) -> Result<String, InError>
+    pub async fn string_invoke<T>(a: &'static str, args: T) -> Result<String, InError>
     where
         T: Serialize,
     {
@@ -76,7 +79,7 @@ impl Invoke {
         .await
         .as_string()
         .ok_or_else(|| InError {
-            a: "failed".to_string(),
+            a: "Failed".to_string(),
         })
     }
 
@@ -120,6 +123,17 @@ impl Invoke {
             }
             Self::ReadStock => {
                 *buffer = Self::string_invoke("read_stock", ()).await?;
+            }
+            Self::Confirm(title, message) => {
+                // let val = json!({});
+                *buffer = Self::string_invoke(
+                    "confirm",
+                    ConfirmArgs {
+                        message: message.clone(),
+                        title: title.clone(),
+                    },
+                )
+                .await?;
             }
         };
         serde_json::from_str::<Result<T, InError>>(buffer)?

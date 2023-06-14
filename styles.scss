@@ -55,11 +55,18 @@ ul {
   margin: 0;
 }
 
+button.danger {
+  @include mixins.default_button(#e44343, #b61212, red);
+}
+
 button {
   font-size: inherit;
   cursor: pointer;
   padding: 0;
   margin: 0;
+  white-space: nowrap;
+  // text-overflow: ellipsis;
+  // overflow: hidden;
 }
 
 input {

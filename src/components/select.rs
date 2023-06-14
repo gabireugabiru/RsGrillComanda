@@ -1,10 +1,12 @@
 // pub fn
-
+use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::MouseEvent;
 use yew::{
     classes, function_component, html, use_state, AttrValue,
-    Callback, Html, Properties,
+    Callback, Html, Properties, use_effect_with_deps,
 };
+
+use crate::infra::{window, log};
 #[derive(Properties, PartialEq)]
 pub struct Props {
     #[prop_or_default]
@@ -24,6 +26,40 @@ pub fn select(
     }: &Props,
 ) -> Html {
     let is_open = use_state(|| false);
+
+
+    use_effect_with_deps(|is_open| {
+        let mut callback_listener = None;
+        
+        if **is_open {
+            let is_open = is_open.clone();
+            let callback = Callback::from(move |_: MouseEvent| {
+                log!("Teste");
+                is_open.set(false);
+            });
+
+            let listener =
+                Closure::<dyn Fn(MouseEvent)>::wrap(
+                    Box::new(move |e: MouseEvent| callback.emit(e))
+                );
+
+            window()
+                .add_event_listener_with_callback(
+                    "click",
+                    listener.as_ref().unchecked_ref()
+                )
+                .unwrap();
+
+            callback_listener = Some(listener);
+        }
+
+        move || {
+            if let Some(callback) = callback_listener {
+                drop(&callback);
+                window().remove_event_listener_with_callback("click", callback.as_ref().unchecked_ref()).unwrap();
+            }
+        }
+    }, is_open.clone());
 
     let list: Html = values
         .iter()
@@ -50,7 +86,9 @@ pub fn select(
         .collect();
 
     html! {
-        <div class={classes!(class.to_string(), "select_component")}>
+        <div onclick={Callback::from(|ev: MouseEvent| {
+            ev.stop_propagation();
+        })} class={classes!(class.to_string(), "select_component")}>
             <button class="top" onclick={{
                 let is_open = is_open.clone();
                 Callback::from(move |_: MouseEvent| {
@@ -61,7 +99,7 @@ pub fn select(
             </button>
 
             if *is_open {
-                <div>
+                <div >
                     {list}
                 </div>
             }

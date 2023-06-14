@@ -1,7 +1,7 @@
 use web_sys::{Element, HtmlInputElement};
 use yew::{
-    classes, function_component, html, use_state, AttrValue, Callback, Classes,
-    Html, Properties, TargetCast,
+    classes, function_component, html, use_state, AttrValue, Callback, Classes, Html,
+    Properties, TargetCast,
 };
 
 use crate::infra::{document, get, log, scroll_into_view};
@@ -44,7 +44,7 @@ pub fn input_auto(
     } else {
         complete
             .iter()
-            .filter(|a| a.contains(&value.trim().to_string()))
+            .filter(|a| a.contains(&value.to_lowercase().trim().to_string()))
             .cloned()
             .collect()
     };
@@ -77,11 +77,9 @@ pub fn input_auto(
             let docs = document();
             // CHANGE SELECTED AUTOCOMPLETE
             if key == "ArrowDown" {
-                let new_selected =
-                    (real_selected + 1).min(filterd_autocomplete.len() - 1);
+                let new_selected = (real_selected + 1).min(filterd_autocomplete.len() - 1);
                 selected.set(new_selected);
-                let a: Element =
-                    get!(docs => "sugestions_{id}_{new_selected}").unwrap();
+                let a: Element = get!(docs => "sugestions_{id}_{new_selected}").unwrap();
                 scroll_into_view(a);
             }
             if key == "ArrowUp" {
@@ -105,7 +103,7 @@ pub fn input_auto(
         })
     };
 
-    if complete.contains(&value.trim().to_string()) {
+    if complete.contains(&value.to_lowercase().trim().to_string()) {
         autocomplete = false
     }
 
@@ -144,8 +142,7 @@ pub fn input_auto(
         Callback::from(move |_: yew::html::onfocusout::Event| {
             let is_open = is_open.clone();
             if *is_open {
-                gloo_timers::callback::Timeout::new(200, move || is_open.set(false))
-                    .forget();
+                gloo_timers::callback::Timeout::new(200, move || is_open.set(false)).forget();
             }
         })
     };

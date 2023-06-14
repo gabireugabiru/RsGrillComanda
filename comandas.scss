@@ -20,12 +20,12 @@ main>div.main.comandas {
         width: 80%;
 
         div {
-            width: 20%;
+            width: 25%;
             padding-left: 6px;
         }
 
         div.name {
-            width: 60%;
+            width: 50%;
         }
     }
 
@@ -162,7 +162,7 @@ main>div.main.comandas {
 
                 >div.name {
                     position: relative;
-                    width: 60%;
+                    width: 50%;
                     padding: none;
                     margin: 0;
                     border: 2px solid #bbb;
@@ -261,13 +261,13 @@ main>div.main.comandas {
 
 
                 input.quantity {
-                    width: 20%;
+                    width: 10%;
                     border-radius: 8px;
                     border-width: 2px;
                 }
 
                 div.total {
-                    width: 20%;
+                    width: 15%;
                     border-radius: 8px;
                     border-width: 2px;
                 }
@@ -287,6 +287,7 @@ main>div.main.comandas {
                     @include mixins.default_button;
                     padding: 6px;
                     font-size: 2rem;
+                    width: 15%;
                 }
 
             }

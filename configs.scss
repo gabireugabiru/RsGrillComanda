@@ -11,21 +11,17 @@ main>div.main.configs {
 
 
         input[type="number"] {
-            max-width: 150px;
+            max-width: 100px;
         }
 
         input.group {
             @media only screen and(max-width: 1400px) {
-                max-width: 200px;
+                max-width: 150px;
             }
         }
 
         button {
             @include mixins.default_button;
-        }
-
-        button.danger {
-            @include mixins.default_button(#e44343, #b61212, red);
         }
 
         li {

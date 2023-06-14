@@ -6,8 +6,9 @@ use yew::{html::onchange::Event, prelude::*};
 
 use crate::components::input_auto::InputAuto;
 use crate::components::select::Select;
-use crate::infra::{document, get, alert, window, scroll_into_view};
+use crate::infra::{document, get, alert, window, scroll_into_view, log};
 use crate::reducer::ApplicationState;
+use crate::stock_state::{StockState, StockActions};
 use crate::{
     header::Header,
     invoke::{invokem, Invoke, SaveArgs},
@@ -17,10 +18,11 @@ use shared::comand::{BackendInput, Comand, Input};
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub state: UseReducerHandle<ApplicationState>,
+    pub stock_state: UseReducerDispatcher<StockState>
 }
 
 #[function_component]
-pub fn MainPage(Props { state }: &Props) -> Html {
+pub fn MainPage(Props { state, stock_state }: &Props) -> Html {
     let exchange = use_state(|| 0.0);
     if let Some(selected) = state.selected_comand.clone() {
         let (inputs, payment) = match state.comands.get(&selected).cloned() {
@@ -49,6 +51,8 @@ pub fn MainPage(Props { state }: &Props) -> Html {
         let onfinalize = {
             let state = state.clone();
             let selected = selected.clone();
+            let stock_state = stock_state.clone();
+            
             Callback::from(move |_: yew::html::onclick::Event| {
                 // FORCE A PAYMENT SELECTED
                 if payment == Payment::NotSelected {
@@ -57,6 +61,7 @@ pub fn MainPage(Props { state }: &Props) -> Html {
                 }
                 let state = state.clone();
                 let selected = selected.clone();
+                let stock_state = stock_state.clone();
                 spawn_local(async move {
                     let win = window();
 
@@ -65,8 +70,7 @@ pub fn MainPage(Props { state }: &Props) -> Html {
                         state.comands.get(&selected).cloned() else {
                             return
                         };
-                    
-                    // let groups = &state.groups;
+                    log!("{:?}", values);
 
                     let mut error = String::new();
 
@@ -119,10 +123,12 @@ pub fn MainPage(Props { state }: &Props) -> Html {
                         })
                         .collect();
 
-                        if values.is_empty() {
-                            alert!(win => "Comanda vazia");
-                            return;
-                        }
+                    let stock_values: Vec<(String, i64)> = values.iter().map(|a| (a.name.clone(), a.quantity as i64)).collect();
+                    
+                    if values.is_empty() {
+                        alert!(win => "Comanda vazia");
+                        return;
+                    }
                  
 
                     if !state.confirm_finalize {
@@ -150,7 +156,7 @@ pub fn MainPage(Props { state }: &Props) -> Html {
                             alert!(win => "Falha ao salvar comanda '{}'", err);
                         }
                     };
-                
+                    stock_state.dispatch(StockActions::SubVec(stock_values));
                 });
             })
         };

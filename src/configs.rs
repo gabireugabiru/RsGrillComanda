@@ -85,10 +85,18 @@ pub fn configs(Props { state }: &Props) -> Html {
                 let name = name.clone();
                 let state = state.clone();
                 Callback::from(move |_ : yew::html::ondblclick::Event| {
+                    let name = name.clone();
                     let mut hash = state.products.clone();
-                    hash.remove(&name);
                     let state = state.clone();
                     spawn_local(async move {
+                        let Ok(is_sure) = invokem!(Invoke::Confirm("Confirmação".to_string(), format!("Tem certeza que deseja remover `{name}`")), bool) else {
+                            return
+                        };
+                        if !is_sure {
+                            return
+                        }
+                        
+                        hash.remove(&name);
                         if let Err(err) = invokem!(Invoke::UpdateProducts(UpdateArgs {
                             products: hash.iter().map(|(k, v)| {
                                 (k.clone(), v.clone())
@@ -116,7 +124,7 @@ pub fn configs(Props { state }: &Props) -> Html {
                             } else {
                                 "".to_string()
                             }}  />
-                            <button type="button" class="danger" ondblclick={onremove}>{"X"}</button>
+                            <button type="button" class="danger" onclick={onremove}>{"X"}</button>
                             <button type="submit"> {"confirmar"} </button>
                         </form> 
                     } else {
@@ -159,10 +167,17 @@ pub fn configs(Props { state }: &Props) -> Html {
             let name = name.clone();
             Callback::from(move |_: yew::html::ondblclick::Event| {
                 let mut new_groups = state.groups.clone();
-                new_groups.remove(&name);
-    
+                let name = name.clone();
                 let state = state.clone();
                 spawn_local(async move {
+                    let Ok(is_sure) = invokem!(Invoke::Confirm("Confirmação".to_string(), format!("Tem certeza que deseja remover {name}")), bool) else {
+                        return
+                    };
+                    if !is_sure {
+                        return
+                    }
+                    
+                    new_groups.remove(&name);
                     let Ok(_) = invokem!(Invoke::SetGroups(SetGroupsArgs { 
                         groups: new_groups.iter().map(|(k,v)| (k.clone(), v.clone())).collect()
                     }), ()) else {
@@ -178,7 +193,7 @@ pub fn configs(Props { state }: &Props) -> Html {
             <div class="group">
                 <div class="group_name">
                     <input class="default" type="text"  disabled={true} value={name.to_string()}  />
-                    <button class="danger" ondblclick={remove}>
+                    <button class="danger" onclick={remove}>
                         {"X"}
                     </button>
                     <button onclick={view} class={classes!(if actual {
@@ -230,7 +245,7 @@ pub fn configs(Props { state }: &Props) -> Html {
                             
                             <form key={i} {onsubmit}>
                                 <input class="default" type="text" id={format!("group_{name}_{i}")} value={a.to_string()} />
-                                <button type="button" class="danger" ondblclick={{
+                                <button type="button" class="danger" onclick={{
                                     let state = state.clone();
                                     let name = name.clone();
 
@@ -239,11 +254,25 @@ pub fn configs(Props { state }: &Props) -> Html {
                                         let docs = document();
                                         let name_input: HtmlInputElement = get!(docs => "group_{}_{}", name, i).unwrap();
                                         let mut groups = state.groups.clone();
-                                        let a = groups.get_mut(&name).unwrap();
-                                        *a = a.iter().filter(|a| a.as_str() != name_input.value().trim()).cloned().collect();
                                         let state = state.clone();
                                         let name = name.clone();
                                         spawn_local(async move {
+
+                                            let Ok(is_sure) = invokem!(Invoke::Confirm(
+                                                "Confirmação".to_string(), 
+                                                format!("Tem certeza que deseja remover `{}`", name_input.value()
+                                            )), bool) else {
+                                                return
+                                            };
+                                            if !is_sure {
+                                                return
+                                            }
+
+                                            let a = groups.get_mut(&name).unwrap();
+                                            *a = a.iter().filter(|a| a.as_str() != name_input.value().trim()).cloned().collect();
+                                         
+
+
                                             let Ok(_) = invokem!(Invoke::SetGroups(SetGroupsArgs {
                                                 groups:groups.iter().map(|(k,v)| {
                                                     (k.clone(), v.clone())

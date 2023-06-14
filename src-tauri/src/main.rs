@@ -56,6 +56,20 @@ fn append<T>(path: T) -> Result<File, std::io::Error> where T: AsRef<Path> {
 }
 
 
+#[tauri::command]
+async fn confirm(message: String, title: String, window: tauri::Window) -> String{
+    let a = tauri::async_runtime::spawn(async move {
+        tauri::api::dialog::blocking::confirm(Some(&window), title, message)
+    }).await;
+
+    parsed_output!(bool, {
+        // let a = tauri::api::dialog::confirm()
+        Ok(match a {
+            Ok(a) => a,
+            Err(_) => false
+        })
+    })
+}
 
 #[tauri::command]
 fn update_stock(stock: Vec<(String, u64)>) -> String {
@@ -475,7 +489,8 @@ fn main() {
             re_export,
             multi_export,
             update_stock,
-            read_stock
+            read_stock,
+            confirm
         ])
         .on_window_event(|ev| match ev.event() {
             WindowEvent::CloseRequested { api, .. } => {

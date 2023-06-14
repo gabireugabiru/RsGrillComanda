@@ -79,7 +79,7 @@ pub fn app() -> Html {
     }
     match state.pages {
         Pages::Main => {
-            html! {<MainPage state={state} />}
+            html! {<MainPage state={state} stock_state={stock_state.dispatcher()} />}
         }
         Pages::Configs => {
             html! { <Configs state={state} />}

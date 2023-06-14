@@ -1,3 +1,5 @@
+@use "mixins";
+
 main>div.main.stock {
     div.container {
         width: 80%;
@@ -5,6 +7,46 @@ main>div.main.stock {
         padding: 1rem;
         background: #242526;
         margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        >div:last-child {
+            width: 50%;
+            display: flex;
+            justify-content: end;
+        }
+
+        form,
+        div {
+            button {
+                @include mixins.default_button;
+            }
+
+            button+button {
+                margin-left: .2rem;
+            }
+
+            button.danger {
+                @include mixins.default_button(#e44343, #b61212, red);
+            }
+        }
+
+        form {
+            width: 100%;
+            // width: 50%;
+            height: 100%;
+            display: flex;
+        }
+
+        input.fill {
+            width: 100%;
+        }
+
+        div.select_component>div {
+            left: auto;
+            right: 0;
+        }
     }
 
     div.container.less {
